@@ -1,9 +1,10 @@
 import { flatten } from "./flatten"
 
 let extensions = [];
+let extdex = {};
 
 export function register(code, Constructor, encoder, decoder) {
-  extensions.push({
+  extensions.push(extdex[code] = {
     code: code,
     Constructor: Constructor,
     encoder: encoder,
@@ -171,5 +172,162 @@ function realEncode(value) {
 }
 
 export function decode(buf) {
+  let offset = 0,
+      buffer = buf;
+  return realDecode();
+
+  function readMap(len) {
+    let obj = {};
+    while (len-- > 0) {
+      obj[realDecode()] = realDecode();
+    }
+    return obj;
+  }
+
+  function readArray(len) {
+    let arr = new Array(len);
+    for (let i = 0; i < len; i++) {
+      arr[i] = realDecode();
+    }
+    return arr;
+  }
+
+  function readString(len) {
+    var str = "";
+    while (len--) {
+      str += String.fromCharCode(buffer[offset++]);
+    }
+    return decode_utf8(str);
+  }
+
+  function readBin(len) {
+    let buf = buffer.slice(offset, offset + len);
+    offset += len;
+    return buf;
+  }
+
+  function readExt(len, type) {
+    let buf = buffer.slice(offset, offset + len);
+    offset += len;
+    let ext = extdex[type];
+    return ext.decoder(buf);
+  }
+
+  function read8() {
+    return (buffer[offset++]) >>> 0;
+  }
+
+  function read16() {
+    return (
+      buffer[offset++] << 8 |
+      buffer[offset++]
+    ) >>> 0;
+  }
+
+  function read32() {
+    return (
+      buffer[offset++] << 24 |
+      buffer[offset++] << 16 |
+      buffer[offset++] << 8 |
+      buffer[offset++]
+    ) >>> 0;
+  }
+
+  function read64() {
+    return read32() * 0x100000000 +
+           read32();
+  }
+
+  function readFloat() {
+    let num = new DataView(buffer).getFloat32(offset, false);
+    offset += 4;
+    return num;
+  }
+
+  function readDouble() {
+    let num = new DataView(buffer).getFloat64(offset, false);
+    offset += 8;
+    return num;
+  }
+
+  function realDecode() {
+    let first = buffer[offset++];
+    // positive fixint
+    if (first < 0x80) return first;
+    // fixmap
+    if (first < 0x90) return readMap(first & 0xf);
+    // fixarray
+    if (first < 0xa0) return readArray(first & 0xf);
+    // fixstr
+    if (first < 0xc0) return readString(first & 0x1f);
+    // negative fixint
+    if (first >= 0xe0) return first - 0x100;
+    switch (first) {
+      // nil
+      case 0xc0: return null;
+      // false
+      case 0xc2: return false;
+      // true
+      case 0xc3: return true;
+      // bin 8
+      case 0xc4: return readBin(read8());
+      // bin 16
+      case 0xc5: return readBin(read16());
+      // bin 32
+      case 0xc6: return readBin(read32());
+      // ext 8
+      case 0xc7: return readExt(read8(), read8());
+      // ext 16
+      case 0xc8: return readExt(read16(), read8());
+      // ext 32
+      case 0xc9: return readExt(read32(), read8());
+      // float 32
+      case 0xca: return readFloat();
+      // float 64
+      case 0xcb: return readDouble();
+      // uint 8
+      case 0xcc: return read8();
+      // uint 16
+      case 0xcd: return read16();
+      // uint 32
+      case 0xce: return read32();
+      // uint 64
+      case 0xcf: return read64();
+      // int 8
+      case 0xd0: return read8() - 0x100;
+      // int 16
+      case 0xd1: return read16() - 0x10000;
+      // int 32
+      case 0xd2: return read32() - 0x100000000;
+      // int 64
+      case 0xd3: return read64() - 0x10000000000000000;
+      // fixext 1
+      case 0xd4: return readExt(1, read8());
+      // fixext 2
+      case 0xd5: return readExt(2, read8());
+      // fixext 4
+      case 0xd6: return readExt(4, read8());
+      // fixext 8
+      case 0xd7: return readExt(8, read8());
+      // fixext 16
+      case 0xd8: return readExt(16, read8());
+      // str 8
+      case 0xd9: return readString(read8());
+      // str 16
+      case 0xda: return readString(read16());
+      // str 32
+      case 0xdb: return readString(read32());
+      // array 16
+      case 0xdc: return readArray(read16());
+      // array 32
+      case 0xdd: return readArray(read32());
+      // map 16
+      case 0xde: return readMap(read16());
+      // map 32
+      case 0xdf: return readMap(read32());
+
+      default: throw new Error("Unexpected byte: " + first.toString(16));
+    }
+  }
 
 }
