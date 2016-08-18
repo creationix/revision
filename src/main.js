@@ -32,7 +32,8 @@ let tests = [
     name: "Tim",
     age: 34,
     message: link
-  }
+  },
+  [1,-1,100,-100,10000,-10000, 100000000, -100000000, 10000000000, -1000000000]
 ];
 
 function serialize(value) {

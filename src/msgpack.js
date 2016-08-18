@@ -94,7 +94,7 @@ function realEncode(value) {
         tooLong(value, value);
       }
       // Negative integers
-      if (value > -0x20) return 0xe0 | -value;
+      if (value > -0x20) return value + 0x100;
       if (value >= -0x80) return [0xd0, uint8(value)];
       if (value >= -0x8000) return [0xd1, uint16(value)];
       if (value >= -0x80000000) return [0xd2, uint32(value)];
