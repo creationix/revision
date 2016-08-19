@@ -1061,6 +1061,12 @@ function* importCommit(owner, repo, sha) {
     repo: repo,
     root: yield* importTree(owner, repo, result.tree.sha)
   };
+  if (result.parents) {
+    let parents = release.parents = [];
+    for (let parent of result.parents) {
+      parents.push(yield* importCommit(owner, repo, parent.sha));
+    }
+  }
   console.log(release);
   return yield* save(release);
 }
