@@ -1032,6 +1032,7 @@ function* gitLoad(owner, repo, type, sha) {
 }
 
 function* importBlob(owner, repo, sha, filename) {
+  sha = yield* deref(owner, repo, sha);
   let result = yield* gitLoad(owner, repo, "blob", sha);
   let file = {
     file: decodeContent(result.content, result.encoding)
@@ -1041,6 +1042,7 @@ function* importBlob(owner, repo, sha, filename) {
 }
 
 function* importTree(owner, repo, sha, filename) {
+  sha = yield* deref(owner, repo, sha);
   let result = yield* gitLoad(owner, repo, "tree", sha);
   let tasks = [];
   for (let entry of result.tree) {
@@ -1069,10 +1071,12 @@ function* importCommit(owner, repo, sha) {
 }
 
 run(function*() {
-  let link = yield* importCommit(
-    "creationix", "msgpack-es", "heads/master"
-  );
-  console.log(link);
+  let owner = "creationix";
+  let repo = "conquest";
+  let ref = "heads/master";
+  console.log(`Importing github://${owner}/${repo}/refs/${ref}`);
+  let link = yield* importCommit(owner, repo, ref);
+  console.log(`Imported as ${link.toHex()}`);
   console.log(yield* load(link));
 }());
 

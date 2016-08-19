@@ -50,6 +50,7 @@ function* gitLoad(owner, repo, type, sha) {
 }
 
 export function* importBlob(owner, repo, sha, filename) {
+  sha = yield* deref(owner, repo, sha);
   let result = yield* gitLoad(owner, repo, "blob", sha);
   let file = {
     file: decodeContent(result.content, result.encoding)
@@ -59,6 +60,7 @@ export function* importBlob(owner, repo, sha, filename) {
 }
 
 export function* importTree(owner, repo, sha, filename) {
+  sha = yield* deref(owner, repo, sha);
   let result = yield* gitLoad(owner, repo, "tree", sha);
   let tasks = [];
   for (let entry of result.tree) {
