@@ -25,3 +25,19 @@ Link.prototype.toHex = function toHex() {
   if (!hex) throw new Error("WAT")
   return hex;
 }
+
+
+// Look for links in an object
+export function scan(value, onLink) {
+  if (value.constructor === Link) {
+    onLink(value);
+  }
+  else if (Array.isArray(value)) {
+    for (let item of value) scan(item, onLink);
+  }
+  else if (value.constructor === Object) {
+    for (let key in value) {
+      scan(value[key], onLink);
+    }
+  }
+}

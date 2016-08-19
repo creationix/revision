@@ -15,6 +15,10 @@ function run(iter) {
   }
 }
 
+function runAll(iters) {
+  return Promise.all(iters.map(run));
+}
+
 function flatten(parts) {
   if (typeof parts === "number") return new Uint8Array([parts]);
   if (parts instanceof Uint8Array) return parts;
@@ -406,6 +410,9 @@ Link.prototype.toHex = function toHex() {
   return hex;
 }
 
+
+// Look for links in an object
+
 let db;
 
 function getDB() {
@@ -445,7 +452,7 @@ function withStore(type, callback) {
   });
 }
 
-let idbKeyval = {
+let storage = {
   get: function(key) {
     let req;
     return withStore('readonly', function(store) {
@@ -911,7 +918,7 @@ var f = function (s) {
   }
 };
 
-window.storage = idbKeyval;
+window.storage = storage;
 
 function digest(buf) {
   return new Link(sha3_256.buffer(buf));
@@ -920,22 +927,153 @@ function digest(buf) {
 function* save(value) {
   let buf = encode(value);
   let link = digest(buf);
-  yield idbKeyval.set(link.toHex(), buf);
+  yield storage.set(link.toHex(), buf);
   return link;
 }
 
 function* load(link) {
-  return decode(yield idbKeyval.get(link.toHex()));
+  return decode(yield storage.get(link.toHex()));
+}
+
+let codes = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+
+// Loop over input 3 bytes at a time
+// a,b,c are 3 x 8-bit numbers
+// they are encoded into groups of 4 x 6-bit numbers
+// aaaaaa aabbbb bbbbcc cccccc
+// if there is no c, then pad the 4th with =
+// if there is also no b then pad the 3rd with =
+let map = [];
+for (let i = 0, l = codes.length; i < l; i++) {
+  map[codes.charCodeAt(i)] = i;
+}
+
+// loop over input 4 characters at a time
+// The characters are mapped to 4 x 6-bit integers a,b,c,d
+// They need to be reassembled into 3 x 8-bit bytes
+// aaaaaabb bbbbcccc ccdddddd
+// if d is padding then there is no 3rd byte
+// if c is padding then there is no 2nd byte
+function decode$1(data) {
+  let bytes = [];
+  let j = 0;
+  for (let i = 0, l = data.length; i < l; i += 4) {
+    let a = map[data.charCodeAt(i)];
+    let b = map[data.charCodeAt(i + 1)];
+    let c = map[data.charCodeAt(i + 2)];
+    let d = map[data.charCodeAt(i + 3)];
+
+    // higher 6 bits are the first char
+    // lower 2 bits are upper 2 bits of second char
+    bytes[j] = (a << 2) | (b >> 4);
+
+    // if the third char is not padding, we have a second byte
+    if (c < 64) {
+      // high 4 bits come from lower 4 bits in b
+      // low 4 bits come from high 4 bits in c
+      bytes[j + 1] = ((b & 0xf) << 4) | (c >> 2);
+
+      // if the fourth char is not padding, we have a third byte
+      if (d < 64) {
+        // Upper 2 bits come from Lower 2 bits of c
+        // Lower 6 bits come from d
+        bytes[j + 2] = ((c & 3) << 6) | d;
+      }
+    }
+    j = j + 3;
+  }
+  return new Uint8Array(bytes);
+}
+
+let modeToType = {
+   '40000': 0, // tree
+  '040000': 0, // tree
+  '100644': 1, // blob
+  '100755': 2, // exec
+  '120000': 3, // sym
+  '160000': 4  // commit
+};
+let modeToImport = {
+   '40000': importTree, // tree
+  '040000': importTree, // tree
+  '100644': importBlob, // blob
+  '100755': importBlob, // exec
+  '120000': importBlob, // sym
+  '160000': importSubmodule  // commit
+}
+
+function decodeContent(content, encoding) {
+  if (encoding !== "base64") {
+    throw new Error("Unknown content encoding from github: " + encoding);
+  }
+  return decode$1(content);
+}
+
+function* importSubmodule(owner, repo, sha) {
+  throw new Error(
+    `TODO: Implement submodule importing: ${owner}/${repo}/${sha}`
+  );
+}
+
+function* deref(owner, repo, ref) {
+  if (/^[0-9a-f]{40}$/.test(ref)) return ref;
+  var url=`https://api.github.com/repos/${owner}/${repo}/git/refs/${ref}`;
+  let result = yield (yield fetch(url)).json();
+  return result.object.sha;
+}
+
+function* gitLoad(owner, repo, type, sha) {
+  let result = yield storage.get(sha);
+  if (result) return result;
+  var url=`https://api.github.com/repos/${owner}/${repo}/git/${type}s/${sha}`;
+  result = yield (yield fetch(url)).json();
+  yield storage.set(sha, result);
+  return result;
+}
+
+function* importBlob(owner, repo, sha, filename) {
+  let result = yield* gitLoad(owner, repo, "blob", sha);
+  let file = {
+    file: decodeContent(result.content, result.encoding)
+  };
+  if (filename) file.name = filename;
+  return yield* save(file);
+}
+
+function* importTree(owner, repo, sha, filename) {
+  let result = yield* gitLoad(owner, repo, "tree", sha);
+  let tasks = [];
+  for (let entry of result.tree) {
+    tasks.push(modeToImport[entry.mode](owner, repo, entry.sha, entry.path));
+  }
+  let entries = (yield runAll(tasks)).map(function (link, i) {
+    let entry = result.tree[i];
+    return [
+      modeToType[entry.mode],
+      entry.path,
+      link
+    ];
+  });
+  let tree = {tree:entries}
+  if (filename) tree.name = filename;
+  return yield* save(tree);
+}
+
+function* importCommit(owner, repo, sha) {
+  sha = yield* deref(owner, repo, sha);
+  let result = yield* gitLoad(owner, repo, "commit", sha);
+  let release = {
+    root: yield* importTree(owner, repo, result.tree.sha)
+  };
+  return yield* save(release);
 }
 
 run(function*() {
-  for (let link of yield* load(yield* save([
-    yield* save({name:"Tim",age:34}),
-    yield* save({name:"Jack",age:10}),
-    yield* save(new Uint8Array(20))
-  ]))) {
-    console.log(yield* link.resolve());
-  }
+  let link = yield* importCommit(
+    "creationix", "msgpack-es", "heads/master"
+  );
+  console.log(link);
+  console.log(yield* load(link));
 }());
 
 }());

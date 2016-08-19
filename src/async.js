@@ -18,3 +18,7 @@ export function run(iter) {
     });
   }
 }
+
+export function runAll(iters) {
+  return Promise.all(iters.map(run));
+}

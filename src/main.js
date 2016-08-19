@@ -1,12 +1,12 @@
 import { run } from "./async";
-import { load, save } from "./cas"
+import { load } from "./cas";
+import { importCommit } from "./github";
+
 
 run(function*() {
-  for (let link of yield* load(yield* save([
-    yield* save({name:"Tim",age:34}),
-    yield* save({name:"Jack",age:10}),
-    yield* save(new Uint8Array(20))
-  ]))) {
-    console.log(yield* link.resolve());
-  }
+  let link = yield* importCommit(
+    "creationix", "msgpack-es", "heads/master"
+  );
+  console.log(link);
+  console.log(yield* load(link));
 }());
