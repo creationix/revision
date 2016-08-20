@@ -56,17 +56,6 @@ function* gitLoad(owner, repo, type, sha) {
   return result;
 }
 
-export function* importBlob(owner, repo, sha, filename) {
-  sha = yield* deref(owner, repo, sha);
-  let data = yield* gitLoad(owner, repo, "blob", sha);
-  let file = {
-    file: new Uint8Array(data)
-  };
-  if (filename) file.name = filename;
-  console.log(file);
-  return yield* save(file);
-}
-
 function parseGitmodules(arr) {
   let text = "";
   for (let i = 0, l = arr.length; i <l; i++) {
@@ -91,7 +80,13 @@ function parseGitmodules(arr) {
   return config;
 }
 
-export function* importTree(owner, repo, sha, filename, path, gitmodules) {
+export function* importBlob(owner, repo, sha) {
+  sha = yield* deref(owner, repo, sha);
+  let data = yield* gitLoad(owner, repo, "blob", sha);
+  return yield* save(data);
+}
+
+export function* importTree(owner, repo, sha, path, gitmodules) {
   sha = yield* deref(owner, repo, sha);
   let result = yield* gitLoad(owner, repo, "tree", sha);
   let tasks = [];
@@ -103,10 +98,10 @@ export function* importTree(owner, repo, sha, filename, path, gitmodules) {
     }
     let newPath = path ? `${path}/${entry.path}` : entry.path;
     tasks.push(modeToImport[entry.mode](
-      owner, repo, entry.sha, entry.path, newPath, gitmodules
+      owner, repo, entry.sha, newPath, gitmodules
     ));
   }
-  let entries = (yield runAll(tasks)).map(function (link, i) {
+  let tree = (yield runAll(tasks)).map(function (link, i) {
     let entry = result.tree[i];
     return [
       modeToType[entry.mode],
@@ -114,31 +109,27 @@ export function* importTree(owner, repo, sha, filename, path, gitmodules) {
       link
     ];
   });
-  let tree = {tree:entries}
-  if (filename) tree.name = filename;
-  console.log(tree);
   return yield* save(tree);
 }
 
 export function* importCommit(owner, repo, sha) {
   sha = yield* deref(owner, repo, sha);
   let result = yield* gitLoad(owner, repo, "commit", sha);
-  let release = {
-    owner: owner,
-    repo: repo,
+  let commit = {
+    url: result.url,
     root: yield* importTree(owner, repo, result.tree.sha)
   };
-  if (result.parents) {
-    let parents = release.parents = [];
-    for (let parent of result.parents) {
-      parents.push(yield* importCommit(owner, repo, parent.sha));
-    }
-  }
-  console.log(release);
-  return yield* save(release);
+  // Uncomment to include all parent commits.
+  // if (result.parents) {
+  //   let parents = commit.parents = [];
+  //   for (let parent of result.parents) {
+  //     parents.push(yield* importCommit(owner, repo, parent.sha));
+  //   }
+  // }
+  return yield* save(commit);
 }
 
-export function* importSubmodule(owner, repo, sha, filename, path, gitmodules) {
+export function* importSubmodule(owner, repo, sha, path, gitmodules) {
   let remote;
   for (let key in gitmodules.submodule) {
     let sub = gitmodules.submodule[key];

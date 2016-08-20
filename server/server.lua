@@ -6,10 +6,11 @@ require('weblit-app')
   port=1337,
   host="127.0.0.1"
 }
+.use(require('weblit-static')("/home/tim/revision2/www"))
 .websocket({
   protocol="cas-sync"
 }, function (req, read, write)
-  local send = redisConnect { host = "localhost", port = 6379 }  
+  local send = redisConnect { host = "localhost", port = 6379 }
   for chunk in read do
     p(chunk)
     write(chunk)

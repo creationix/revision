@@ -9,5 +9,6 @@ return {
     "creationix/weblit-logger@2",
     "creationix/weblit-static@2",
     "creationix/redis-client@1",
+    "luvit/pretty-print@2",
   }
 }
