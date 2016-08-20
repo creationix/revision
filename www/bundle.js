@@ -452,7 +452,7 @@ function withStore(type, callback) {
   });
 }
 
-let storage = {
+let idbKeyval = {
   get: function(key) {
     let req;
     return withStore('readonly', function(store) {
@@ -918,7 +918,7 @@ var f = function (s) {
   }
 };
 
-window.storage = storage;
+window.storage = idbKeyval;
 
 function digest(buf) {
   return new Link(sha3_256.buffer(buf));
@@ -927,12 +927,12 @@ function digest(buf) {
 function* save(value) {
   let buf = encode(value);
   let link = digest(buf);
-  yield storage.set(link.toHex(), buf);
+  yield idbKeyval.set(link.toHex(), buf);
   return link;
 }
 
 function* load(link) {
-  return decode(yield storage.get(link.toHex()));
+  return decode(yield idbKeyval.get(link.toHex()));
 }
 
 let modeToRead = {
@@ -944,7 +944,6 @@ let modeToRead = {
   '160000': readSubmodule  // commit
 }
 
-
 let authorization;
 function* get(path, format) {
   format = format || "json";
@@ -955,7 +954,7 @@ function* get(path, format) {
       "application/vnd.github.v3+json"
   };
   if (authorization === undefined) {
-    authorization = yield storage.get("GITHUB_AUTHORIZATION") || false;
+    authorization = yield idbKeyval.get("GITHUB_AUTHORIZATION") || false;
     if (authorization) console.log("Using GITHUB_AUTHORIZATION");
   }
   if (authorization) headers.Authorization = `Basic ${authorization}`;
@@ -970,7 +969,7 @@ function* deref(owner, repo, ref) {
 }
 
 function* gitLoad(owner, repo, type, sha) {
-  let result = yield storage.get(sha);
+  let result = yield idbKeyval.get(sha);
   if (result) return result;
   result = yield* get(
     `repos/${owner}/${repo}/git/${type}s/${sha}`,
@@ -978,7 +977,7 @@ function* gitLoad(owner, repo, type, sha) {
   );
   if (!result) return;
   if (type === "blob") result = new Uint8Array(result);
-  yield storage.set(sha, result);
+  yield idbKeyval.set(sha, result);
   return result;
 }
 
@@ -1018,8 +1017,7 @@ function* readSym(owner, repo, sha) {
 
 function* readExec(owner, repo, sha) {
   let buf = yield* gitLoad(owner, repo, "blob", sha);
-  // TODO: encode exec bit somehow
-  return yield* save(buf);
+  return [yield* save(buf),true];
 }
 
 function* readBlob(owner, repo, sha) {
@@ -1041,10 +1039,9 @@ function* readTree(owner, repo, sha, path, gitmodules) {
       owner, repo, entry.sha, newPath, gitmodules
     ));
   }
-  let tree = {};
-  (yield runAll(tasks)).forEach(function (item, i) {
+  let tree = (yield runAll(tasks)).map(function (item, i) {
     let entry = result.tree[i];
-    tree[entry.path] = item;
+    return [entry.path].concat(item);
   });
   return tree;
 }
@@ -1055,7 +1052,7 @@ function* readCommit(owner, repo, sha) {
   let tree = yield* readTree(owner, repo, commit.tree.sha);
   return {
     github: `${owner}/${repo}`,
-    sha: sha,
+    sha1: sha,
     tree: yield* save(tree)
   };
 }
@@ -1074,19 +1071,12 @@ function* readSubmodule(owner, repo, sha, path, gitmodules) {
   return yield* readCommit(match[1], match[2], sha);
 }
 
-function* importCommit(owner, repo, sha) {
-  let tree = yield* readCommit(owner, repo, sha);
-  return yield* save(tree);
-}
-
 run(function*() {
   let owner = "creationix";
   let repo = "revision";
   let ref = "heads/master";
   console.log(`Importing github://${owner}/${repo}/refs/${ref}`);
-  let link = yield* importCommit(owner, repo, ref);
-  console.log(`Imported as ${link.toHex()}`);
-  let commit = yield* load(link);
+  let commit = yield* readCommit(owner, repo, ref);
   console.log(commit);
   let tree = yield* commit.tree.resolve();
   console.log(tree);

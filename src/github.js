@@ -2,14 +2,6 @@ import { save } from "./cas";
 import { runAll } from "./async";
 import { idbKeyval as storage } from "./idb-keyval";
 
-let modeToType = {
-   '40000': "tree",
-  '040000': "tree",
-  '100644': "file",
-  '100755': "exec",
-  '120000': "sym",
-  '160000': "sub"
-};
 let modeToRead = {
    '40000': readTree, // tree
   '040000': readTree, // tree
@@ -18,7 +10,6 @@ let modeToRead = {
   '120000': readSym, // sym
   '160000': readSubmodule  // commit
 }
-
 
 let authorization;
 function* get(path, format) {
@@ -93,8 +84,7 @@ function* readSym(owner, repo, sha) {
 
 function* readExec(owner, repo, sha) {
   let buf = yield* gitLoad(owner, repo, "blob", sha);
-  // TODO: encode exec bit somehow
-  return yield* save(buf);
+  return [yield* save(buf),true];
 }
 
 function* readBlob(owner, repo, sha) {
@@ -116,10 +106,9 @@ export function* readTree(owner, repo, sha, path, gitmodules) {
       owner, repo, entry.sha, newPath, gitmodules
     ));
   }
-  let tree = {};
-  (yield runAll(tasks)).forEach(function (item, i) {
+  let tree = (yield runAll(tasks)).map(function (item, i) {
     let entry = result.tree[i];
-    tree[entry.path] = item;
+    return [entry.path].concat(item);
   });
   return tree;
 }
@@ -130,7 +119,7 @@ export function* readCommit(owner, repo, sha) {
   let tree = yield* readTree(owner, repo, commit.tree.sha);
   return {
     github: `${owner}/${repo}`,
-    sha: sha,
+    sha1: sha,
     tree: yield* save(tree)
   };
 }
