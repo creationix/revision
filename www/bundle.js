@@ -1078,8 +1078,6 @@ run(function*() {
   console.log(`Importing github://${owner}/${repo}/refs/${ref}`);
   let commit = yield* readCommit(owner, repo, ref);
   console.log(commit);
-  let tree = yield* commit.tree.resolve();
-  console.log(tree);
 }());
 
 }());
