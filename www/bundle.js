@@ -1053,7 +1053,7 @@ function* readCommit(owner, repo, sha) {
   return {
     github: `${owner}/${repo}`,
     sha1: sha,
-    tree: yield* save(tree)
+    tree: tree
   };
 }
 
