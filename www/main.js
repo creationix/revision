@@ -1,7 +1,7 @@
 (function () {
 'use strict';
 
-// Usage: async(function* (...args) { yield promise... })(..args) -> Promise
+// Usage: run(iter) -> Promise
 function run(iter) {
   try { return handle(iter.next()); }
   catch (ex) { return Promise.reject(ex); }
@@ -387,6 +387,8 @@ function decode(buf) {
 
 }
 
+// Register the Link type so we can serialize hashes as a new special type.
+// hash itself is just a 32 byte Uint8Array
 register(127, Link,
   (link) => { return link.hash; },
   (buf) => { return new Link(buf); }
@@ -409,9 +411,6 @@ Link.prototype.toHex = function toHex() {
   if (!hex) throw new Error("WAT")
   return hex;
 }
-
-
-// Look for links in an object
 
 let db;
 
@@ -531,6 +530,12 @@ var createMethod = function (bits, padding) {
   }
   return method;
 };
+
+// var algorithms = [
+//   {name: 'keccak', padding: KECCAK_PADDING, bits: BITS, createMethod: createMethod},
+//   {name: 'sha3', padding: PADDING, bits: BITS, createMethod: createMethod},
+//   {name: 'shake', padding: SHAKE_PADDING, bits: SHAKE_BITS, createMethod: createShakeMethod}
+// ];
 
 let sha3_256 = createMethod(256, PADDING);
 // var methods = {};
@@ -918,8 +923,6 @@ var f = function (s) {
   }
 };
 
-window.storage = idbKeyval;
-
 function digest(buf) {
   return new Link(sha3_256.buffer(buf));
 }
@@ -1071,7 +1074,10 @@ function* readSubmodule(owner, repo, sha, path, gitmodules) {
   return yield* readCommit(match[1], match[2], sha);
 }
 
+window.storage = idbKeyval;
+
 run(function*() {
+  yield navigator.serviceWorker.register("worker.js");
   let owner = "creationix";
   let repo = "revision";
   let ref = "heads/master";
@@ -1083,4 +1089,4 @@ run(function*() {
 }());
 
 }());
-//# sourceMappingURL=bundle.js.map
+//# sourceMappingURL=main.js.map

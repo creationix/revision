@@ -1,7 +1,7 @@
 
 export default {
-  entry: 'src/main.js',
-  dest: 'www/main.js',
+  entry: 'src/worker.js',
+  dest: 'www/worker.js',
   format: 'iife',
   sourceMap: true
 };

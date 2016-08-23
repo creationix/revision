@@ -1,8 +1,11 @@
 import { run } from "./async";
 import { readCommit } from "./github";
 import { save } from "./cas";
+import { idbKeyval as storage } from "./idb-keyval";
+window.storage = storage;
 
 run(function*() {
+  yield navigator.serviceWorker.register("worker.js");
   let owner = "creationix";
   let repo = "revision";
   let ref = "heads/master";
