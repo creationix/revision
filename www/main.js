@@ -1,7 +1,7 @@
 (function () {
 'use strict';
 
-// Usage: run(iter) -> Promise
+// Usage: async(function* (...args) { yield promise... })(..args) -> Promise
 function run(iter) {
   try { return handle(iter.next()); }
   catch (ex) { return Promise.reject(ex); }
@@ -387,8 +387,6 @@ function decode(buf) {
 
 }
 
-// Register the Link type so we can serialize hashes as a new special type.
-// hash itself is just a 32 byte Uint8Array
 register(127, Link,
   (link) => { return link.hash; },
   (buf) => { return new Link(buf); }
@@ -396,7 +394,25 @@ register(127, Link,
 
 // Link has some nice methods in addition to storing the hash buffer.
 function Link(hash) {
-  this.hash = new Uint8Array(hash);
+  if (hash.constructor === ArrayBuffer) {
+    hash = new Uint8Array(hash);
+  }
+  if (hash.constructor === Uint8Array) {
+    this.hash = hash;
+    return;
+  }
+  if (typeof hash === "string") {
+    if (!/^[0-9a-f]{64}$/.test(hash)) {
+      throw new TypeError("Invalid string, expected hash");
+    }
+    this.hash = new Uint8Array(32);
+    let j = 0;
+    for (let i = 0; i < 64; i += 2) {
+      this.hash[j++] = parseInt(hash.substr(i, 2), 16);
+    }
+    return;
+  }
+  throw new TypeError("Invalid hash, expected string or buffer");
 }
 Link.prototype.resolve = function* resolve() {
   return yield* load(this);
@@ -411,6 +427,9 @@ Link.prototype.toHex = function toHex() {
   if (!hex) throw new Error("WAT")
   return hex;
 }
+
+
+// Look for links in an object
 
 let db;
 
@@ -530,12 +549,6 @@ var createMethod = function (bits, padding) {
   }
   return method;
 };
-
-// var algorithms = [
-//   {name: 'keccak', padding: KECCAK_PADDING, bits: BITS, createMethod: createMethod},
-//   {name: 'sha3', padding: PADDING, bits: BITS, createMethod: createMethod},
-//   {name: 'shake', padding: SHAKE_PADDING, bits: SHAKE_BITS, createMethod: createShakeMethod}
-// ];
 
 let sha3_256 = createMethod(256, PADDING);
 // var methods = {};
@@ -1078,14 +1091,23 @@ window.storage = idbKeyval;
 
 run(function*() {
   yield navigator.serviceWorker.register("worker.js");
-  let owner = "creationix";
-  let repo = "revision";
-  let ref = "heads/master";
-  console.log(`Importing github://${owner}/${repo}/refs/${ref}`);
-  let commit = yield* readCommit(owner, repo, ref);
-  console.log(commit);
-  let link = yield* save(commit);
-  console.log(link);
+  let root = yield idbKeyval.get("root");
+  if (!root) {
+    let owner = "creationix";
+    let repo = "revision";
+    let ref = "heads/master";
+    console.log(`Importing github://${owner}/${repo}/refs/${ref}`);
+    let commit = yield* readCommit(owner, repo, ref);
+    console.log(commit);
+    let link = yield* save(commit);
+    console.log(link);
+    root = link.toHex();
+    yield idbKeyval.set("root", link.toHex());
+  }
+
+  let response = yield fetch(`/${root}/`);
+  let body = yield response.text();
+  console.log("Response", response.headers, body);
 }());
 
 }());

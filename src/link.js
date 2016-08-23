@@ -10,7 +10,25 @@ register(127, Link,
 
 // Link has some nice methods in addition to storing the hash buffer.
 export function Link(hash) {
-  this.hash = new Uint8Array(hash);
+  if (hash.constructor === ArrayBuffer) {
+    hash = new Uint8Array(hash);
+  }
+  if (hash.constructor === Uint8Array) {
+    this.hash = hash;
+    return;
+  }
+  if (typeof hash === "string") {
+    if (!/^[0-9a-f]{64}$/.test(hash)) {
+      throw new TypeError("Invalid string, expected hash");
+    }
+    this.hash = new Uint8Array(32);
+    let j = 0;
+    for (let i = 0; i < 64; i += 2) {
+      this.hash[j++] = parseInt(hash.substr(i, 2), 16);
+    }
+    return;
+  }
+  throw new TypeError("Invalid hash, expected string or buffer");
 }
 Link.prototype.resolve = function* resolve() {
   return yield* load(this);

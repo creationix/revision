@@ -1,6 +1,8 @@
-
-// import { load } from "./cas";
 import { run } from "./async";
+import { Link } from "./link";
+
+const CACHE_NAME = 'v1';
+const routePattern = /^https?:\/\/[^\/]+\/([0-9a-f]{64})(\/.*)$/;
 
 function wrap(gen) {
   return function (event) {
@@ -9,9 +11,10 @@ function wrap(gen) {
 }
 
 self.addEventListener('install', wrap(function* () {
-  let cache = yield caches.open('v1');
+  let cache = yield caches.open(CACHE_NAME);
   yield cache.addAll([
     '/',
+    '/index.html',
     '/main.js',
     '/worker.js',
     '/themes/dark-ui.css'
@@ -23,17 +26,60 @@ self.addEventListener('activate', wrap(function* () {
   yield self.clients.claim();
 }));
 
-self.addEventListener('fetch', function(event) {
-  event.respondWith(
-    caches.match(event.request)
-      .then(function(response) {
-        console.log("Loading from cache...", event.request, response);
-        // Cache hit - return response
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
-      }
-    )
-  );
+
+self.addEventListener('fetch', function (event) {
+  return event.respondWith(run(function* () {
+    let match = event.request.url.match(routePattern);
+    if (!match) return fetch(event.request);
+
+
+    let root = new Link(match[1]),
+        path = match[2];
+    return yield* serve(root, path);
+
+  }()));
 });
+
+function* passthrough(event) {
+  // IMPORTANT: Clone the request. A request is a stream and
+  // can only be consumed once. Since we are consuming this
+  // once by cache and once by the browser for fetch, we need
+  // to clone the response.
+  let response = yield fetch(event.request.clone());
+
+  // Check if we received a valid response
+  if(!response || response.status !== 200 || response.type !== 'basic') {
+    return response;
+  }
+
+  // IMPORTANT: Clone the response. A response is a stream
+  // and because we want the browser to consume the response
+  // as well as the cache consuming the response, we need
+  // to clone it so we have two streams.
+  var responseToCache = response.clone();
+
+  let cache = yield caches.open(CACHE_NAME);
+  yield cache.put(event.request, responseToCache);
+  return response;
+}
+
+
+function* serve(root, path) {
+  let tree = yield* root.resolve();
+  let html = `<h1>${path}</h1>`;
+  html += "<ul>";
+  for (let name in tree) {
+    let newPath = path + (path[path.length - 1] === '/' ? '' : '/') + name;
+    let entry = tree[name];
+    if (entry.constructor === Object) {
+      newPath += "/";
+    }
+    let href = `/${root.toHex()}${newPath}`;
+    html += `<li><a href="${href}">${name}</a></li>`;
+  }
+  html += "</ul>";
+
+  return new Response(html, {
+    headers: { 'Content-Type': 'text/html' }
+  });
+}
