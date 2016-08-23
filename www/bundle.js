@@ -969,15 +969,16 @@ function* deref(owner, repo, ref) {
 }
 
 function* gitLoad(owner, repo, type, sha) {
-  let result = yield idbKeyval.get(sha);
-  if (result) return result;
+  let result;
+  // result = yield storage.get(sha);
+  // if (result) return result;
   result = yield* get(
     `repos/${owner}/${repo}/git/${type}s/${sha}`,
     type === "blob" ? "arrayBuffer" : "json"
   );
   if (!result) return;
   if (type === "blob") result = new Uint8Array(result);
-  yield idbKeyval.set(sha, result);
+  // yield storage.set(sha, result);
   return result;
 }
 
@@ -1017,7 +1018,8 @@ function* readSym(owner, repo, sha) {
 
 function* readExec(owner, repo, sha) {
   let buf = yield* gitLoad(owner, repo, "blob", sha);
-  return [yield* save(buf),true];
+  // We're throwing away the exec bit
+  return yield* save(buf);
 }
 
 function* readBlob(owner, repo, sha) {
@@ -1039,9 +1041,10 @@ function* readTree(owner, repo, sha, path, gitmodules) {
       owner, repo, entry.sha, newPath, gitmodules
     ));
   }
-  let tree = (yield runAll(tasks)).map(function (item, i) {
+  let tree = {};
+  (yield runAll(tasks)).forEach(function (item, i) {
     let entry = result.tree[i];
-    return [entry.path].concat(item);
+    tree[entry.path] = item;
   });
   return tree;
 }
@@ -1049,12 +1052,8 @@ function* readTree(owner, repo, sha, path, gitmodules) {
 function* readCommit(owner, repo, sha) {
   sha = yield* deref(owner, repo, sha);
   let commit = yield* gitLoad(owner, repo, "commit", sha);
-  let tree = yield* readTree(owner, repo, commit.tree.sha);
-  return {
-    github: `${owner}/${repo}`,
-    sha1: sha,
-    tree: tree
-  };
+  // We're throwing away the commit information and returning the tree directly.
+  return yield* readTree(owner, repo, commit.tree.sha);
 }
 
 function* readSubmodule(owner, repo, sha, path, gitmodules) {
@@ -1068,6 +1067,7 @@ function* readSubmodule(owner, repo, sha, path, gitmodules) {
   if (!remote) throw new Error(`No gitmodules entry for ${path}`);
   let match = remote.match(/github.com[:\/]([^\/]+)\/(.+?)(\.git)?$/);
   if (!match) throw new Error(`Submodule is not on github ${remote}`);
+  // Throw away the submodule information and reuturn the tree.
   return yield* readCommit(match[1], match[2], sha);
 }
 
@@ -1078,6 +1078,8 @@ run(function*() {
   console.log(`Importing github://${owner}/${repo}/refs/${ref}`);
   let commit = yield* readCommit(owner, repo, ref);
   console.log(commit);
+  let link = yield* save(commit);
+  console.log(link);
 }());
 
 }());
