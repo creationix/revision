@@ -109,7 +109,7 @@ run(function*() {
   }
   else {
     owner = "creationix";
-    repo = "revision";
+    repo = "conquest";
     ref = "heads/master";
   }
   $.name = `${owner}/${repo}`;

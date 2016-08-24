@@ -20,11 +20,13 @@ function* get(path, format) {
       "application/vnd.github.v3.raw" :
       "application/vnd.github.v3+json"
   };
-  if (authorization === undefined) {
-    authorization = yield storage.get("GITHUB_AUTHORIZATION") || false;
-    if (authorization) console.log("Using GITHUB_AUTHORIZATION");
-  }
-  if (authorization) headers.Authorization = `Basic ${authorization}`;
+  let username = (yield storage.get("GITHUB_USERNAME")) ||
+    prompt("Enter github username (for API auth)");
+  if (username) yield storage.set("GITHUB_USERNAME", username);
+  let token = (yield storage.get("GITHUB_TOKEN")) ||
+    prompt("Enter personal access token (for API auth)");
+  if (token) yield storage.set("GITHUB_TOKEN", token);
+  headers.Authorization = `Basic ${btoa(`${username}:${token}`)}`;
   let res = yield fetch(url, {headers:headers});
   return res && (yield res[format]());
 }
