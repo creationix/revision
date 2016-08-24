@@ -15,5 +15,7 @@ export function* save(value) {
 }
 
 export function* load(link) {
-  return decode(yield storage.get(link.toHex()));
+  let hex = typeof link === "string" ?
+    link : link.toHex();
+  return decode(yield storage.get(hex));
 }

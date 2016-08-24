@@ -1,5 +1,6 @@
 import { run } from "./async";
 import { Link } from "./link";
+import { guess } from "./mime";
 
 const CACHE_NAME = 'v1';
 const routePattern = /^https?:\/\/[^\/]+\/([0-9a-f]{64})(\/.*)$/;
@@ -17,7 +18,8 @@ self.addEventListener('install', wrap(function* () {
     '/index.html',
     '/main.js',
     '/worker.js',
-    '/themes/dark-ui.css'
+    '/css/dark-theme.css',
+    '/css/revision-icons-embedded.css'
   ]);
   yield self.skipWaiting();
 }));
@@ -31,8 +33,6 @@ self.addEventListener('fetch', function (event) {
   return event.respondWith(run(function* () {
     let match = event.request.url.match(routePattern);
     if (!match) return fetch(event.request);
-
-
     let root = new Link(match[1]),
         path = match[2];
     return yield* serve(root, path);
@@ -63,14 +63,30 @@ function* passthrough(event) {
   return response;
 }
 
-
 function* serve(root, path) {
-  let tree = yield* root.resolve();
+  console.log("PATH", path);
+  let node = yield* root.resolve();
+  for (let part of path.split('/')) {
+    if (!part) continue;
+    console.log(node, part);
+    node = node[part];
+    if (!node) {
+      return new Response(`No such path: ${path}`);
+    }
+  }
+  console.log("NODE", node);
+  if (node instanceof Link) {
+    // Render file
+    let body = yield* node.resolve();
+    return new Response(body, {
+      headers: { 'Content-Type': guess(path)}
+    });
+  }
   let html = `<h1>${path}</h1>`;
   html += "<ul>";
-  for (let name in tree) {
+  for (let name in node) {
     let newPath = path + (path[path.length - 1] === '/' ? '' : '/') + name;
-    let entry = tree[name];
+    let entry = node[name];
     if (entry.constructor === Object) {
       newPath += "/";
     }

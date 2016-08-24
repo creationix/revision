@@ -948,7 +948,9 @@ function* save(value) {
 }
 
 function* load(link) {
-  return decode(yield idbKeyval.get(link.toHex()));
+  let hex = typeof link === "string" ?
+    link : link.toHex();
+  return decode(yield idbKeyval.get(hex));
 }
 
 let modeToRead = {
@@ -1087,27 +1089,423 @@ function* readSubmodule(owner, repo, sha, path, gitmodules) {
   return yield* readCommit(match[1], match[2], sha);
 }
 
+//////////////////////////////////////
+//                                  //
+// JS domBuilder Library            //
+//                                  //
+// Tim Caswell <tim@creationix.com> //
+//                                  //
+//////////////////////////////////////
+
+function domBuilder(json, refs) {
+
+  // Render strings as text nodes
+  if (typeof json === 'string') return document.createTextNode(json);
+
+  // Pass through html elements and text nodes as-is
+  if (json instanceof HTMLElement || json instanceof window.Text) return json;
+
+  // Stringify any other value types
+  if (!Array.isArray(json)) return document.createTextNode(json + "");
+
+  // Empty arrays are just empty fragments.
+  if (!json.length) return document.createDocumentFragment();
+
+  var node, first;
+  for (var i = 0, l = json.length; i < l; i++) {
+    var part = json[i];
+
+    if (!node) {
+      if (typeof part === 'string') {
+        // Create a new dom node by parsing the tagline
+        var tag = part.match(TAG_MATCH);
+        tag = tag ? tag[0] : "div";
+        node = document.createElement(tag);
+        first = true;
+        var classes = part.match(CLASS_MATCH);
+        if (classes) node.setAttribute('class', classes.map(stripFirst).join(' '));
+        var id = part.match(ID_MATCH);
+        if (id) node.setAttribute('id', id[0].substr(1));
+        var ref = part.match(REF_MATCH);
+        if (refs && ref) refs[ref[0].substr(1)] = node;
+        continue;
+      } else if (typeof part === "function") {
+        return domBuilder(part.apply(null, json.slice(i + 1)), refs);
+      } else {
+        node = document.createDocumentFragment();
+      }
+    }
+
+    // Except the first item if it's an attribute object
+    if (first && typeof part === 'object' && part.constructor === Object) {
+      setAttrs(node, part);
+    } else {
+      node.appendChild(domBuilder(part, refs));
+    }
+    first = false;
+  }
+  return node;
+}
+
+function setAttrs(node, attrs) {
+  var keys = Object.keys(attrs);
+  for (var i = 0, l = keys.length; i < l; i++) {
+    var key = keys[i];
+    var value = attrs[key];
+    if (key === "$") {
+      value(node);
+    } else if (key === "css" || key === "style" && value.constructor === Object) {
+      setStyle(node.style, value);
+    } else if (key.substr(0, 2) === "on") {
+      node.addEventListener(key.substr(2), value, false);
+    } else if (typeof value === "boolean") {
+      if (value) node.setAttribute(key, key);
+    } else {
+      node.setAttribute(key, value);
+    }
+  }
+}
+
+function setStyle(style, attrs) {
+  var keys = Object.keys(attrs);
+  for (var i = 0, l = keys.length; i < l; i++) {
+    var key = keys[i];
+    style[key] = attrs[key];
+  }
+}
+
+var CLASS_MATCH = /\.[^.#$]+/g;
+var ID_MATCH = /#[^.#$]+/;
+var REF_MATCH = /\$[^.#$]+/;
+var TAG_MATCH = /^[^.#$]+/;
+function stripFirst(part) {
+  return part.substr(1);
+}
+
+// A simple mime database.
+let types;
+
+let defaultMime = "application/octet-stream";
+
+function guess(path) {
+  path = path.toLowerCase().trim();
+  var index = path.lastIndexOf("/");
+  if (index >= 0) {
+    path = path.substr(index + 1);
+  }
+  index = path.lastIndexOf(".");
+  if (index >= 0) {
+    path = path.substr(index + 1);
+  }
+  return types[path] || defaultMime;
+}
+
+// Borrowed and passed around from who knows where, last grabbed from connect.
+types = {
+  "3gp": "video/3gpp",
+  a: "application/octet-stream",
+  ai: "application/postscript",
+  aif: "audio/x-aiff",
+  aiff: "audio/x-aiff",
+  asc: "application/pgp-signature",
+  asf: "video/x-ms-asf",
+  asm: "text/x-asm",
+  asx: "video/x-ms-asf",
+  atom: "application/atom+xml",
+  au: "audio/basic",
+  avi: "video/x-msvideo",
+  bat: "application/x-msdownload",
+  bin: "application/octet-stream",
+  bmp: "image/bmp",
+  bz2: "application/x-bzip2",
+  c: "text/x-csrc",
+  cab: "application/vnd.ms-cab-compressed",
+  can: "application/candor",
+  cc: "text/x-c++src",
+  chm: "application/vnd.ms-htmlhelp",
+  "class": "application/octet-stream",
+  com: "application/x-msdownload",
+  conf: "text/plain",
+  cpp: "text/x-c",
+  crt: "application/x-x509-ca-cert",
+  css: "text/css",
+  csv: "text/csv",
+  cxx: "text/x-c",
+  deb: "application/x-debian-package",
+  der: "application/x-x509-ca-cert",
+  diff: "text/x-diff",
+  djv: "image/vnd.djvu",
+  djvu: "image/vnd.djvu",
+  dll: "application/x-msdownload",
+  dmg: "application/octet-stream",
+  doc: "application/msword",
+  dot: "application/msword",
+  dtd: "application/xml-dtd",
+  dvi: "application/x-dvi",
+  ear: "application/java-archive",
+  eml: "message/rfc822",
+  eps: "application/postscript",
+  exe: "application/x-msdownload",
+  f: "text/x-fortran",
+  f77: "text/x-fortran",
+  f90: "text/x-fortran",
+  flv: "video/x-flv",
+  "for": "text/x-fortran",
+  gem: "application/octet-stream",
+  gemspec: "text/x-script.ruby",
+  gif: "image/gif",
+  gyp: "text/x-script.python",
+  gypi: "text/x-script.python",
+  gz: "application/x-gzip",
+  h: "text/x-chdr",
+  hh: "text/x-c++hdr",
+  htm: "text/html",
+  html: "text/html",
+  ico: "image/vnd.microsoft.icon",
+  ics: "text/calendar",
+  ifb: "text/calendar",
+  iso: "application/octet-stream",
+  jar: "application/java-archive",
+  java: "text/x-java-source",
+  jnlp: "application/x-java-jnlp-file",
+  jpeg: "image/jpeg",
+  jpg: "image/jpeg",
+  js: "application/javascript",
+  json: "application/json",
+  less: "text/css",
+  log: "text/plain",
+  lua: "text/x-script.lua",
+  luac: "application/x-bytecode.lua",
+  makefile: "text/x-makefile",
+  m3u: "audio/x-mpegurl",
+  m4v: "video/mp4",
+  man: "text/troff",
+  manifest: "text/cache-manifest",
+  markdown: "text/x-markdown",
+  mathml: "application/mathml+xml",
+  mbox: "application/mbox",
+  mdoc: "text/troff",
+  md: "text/x-markdown",
+  me: "text/troff",
+  mid: "audio/midi",
+  midi: "audio/midi",
+  mime: "message/rfc822",
+  mml: "application/mathml+xml",
+  mng: "video/x-mng",
+  mov: "video/quicktime",
+  mp3: "audio/mpeg",
+  mp4: "video/mp4",
+  mp4v: "video/mp4",
+  mpeg: "video/mpeg",
+  mpg: "video/mpeg",
+  ms: "text/troff",
+  msi: "application/x-msdownload",
+  odp: "application/vnd.oasis.opendocument.presentation",
+  ods: "application/vnd.oasis.opendocument.spreadsheet",
+  odt: "application/vnd.oasis.opendocument.text",
+  ogg: "application/ogg",
+  p: "text/x-pascal",
+  pas: "text/x-pascal",
+  pbm: "image/x-portable-bitmap",
+  pdf: "application/pdf",
+  pem: "application/x-x509-ca-cert",
+  pgm: "image/x-portable-graymap",
+  pgp: "application/pgp-encrypted",
+  pkg: "application/octet-stream",
+  pl: "text/x-script.perl",
+  pm: "text/x-script.perl-module",
+  png: "image/png",
+  pnm: "image/x-portable-anymap",
+  ppm: "image/x-portable-pixmap",
+  pps: "application/vnd.ms-powerpoint",
+  ppt: "application/vnd.ms-powerpoint",
+  ps: "application/postscript",
+  psd: "image/vnd.adobe.photoshop",
+  py: "text/x-script.python",
+  qt: "video/quicktime",
+  ra: "audio/x-pn-realaudio",
+  rake: "text/x-script.ruby",
+  ram: "audio/x-pn-realaudio",
+  rar: "application/x-rar-compressed",
+  rb: "text/x-script.ruby",
+  rdf: "application/rdf+xml",
+  roff: "text/troff",
+  rpm: "application/x-redhat-package-manager",
+  rss: "application/rss+xml",
+  rtf: "application/rtf",
+  ru: "text/x-script.ruby",
+  s: "text/x-asm",
+  sgm: "text/sgml",
+  sgml: "text/sgml",
+  sh: "application/x-sh",
+  sig: "application/pgp-signature",
+  snd: "audio/basic",
+  so: "application/octet-stream",
+  svg: "image/svg+xml",
+  svgz: "image/svg+xml",
+  swf: "application/x-shockwave-flash",
+  t: "text/troff",
+  tar: "application/x-tar",
+  tbz: "application/x-bzip-compressed-tar",
+  tci: "application/x-topcloud",
+  tcl: "application/x-tcl",
+  tex: "application/x-tex",
+  texi: "application/x-texinfo",
+  texinfo: "application/x-texinfo",
+  text: "text/plain",
+  tif: "image/tiff",
+  tiff: "image/tiff",
+  torrent: "application/x-bittorrent",
+  tr: "text/troff",
+  ttf: "application/x-font-ttf",
+  txt: "text/plain",
+  vcf: "text/x-vcard",
+  vcs: "text/x-vcalendar",
+  vrml: "model/vrml",
+  war   : "application/java-archive",
+  wav   : "audio/x-wav",
+  webapp: "application/x-web-app-manifest+json",
+  webm: "video/webm",
+  wma: "audio/x-ms-wma",
+  wmv: "video/x-ms-wmv",
+  wmx: "video/x-ms-wmx",
+  wrl: "model/vrml",
+  wsdl: "application/wsdl+xml",
+  xbm: "image/x-xbitmap",
+  xhtml: "application/xhtml+xml",
+  xls: "application/vnd.ms-excel",
+  xml: "application/xml",
+  xpm: "image/x-xpixmap",
+  xsl: "application/xml",
+  xslt: "application/xslt+xml",
+  yaml: "text/yaml",
+  yml: "text/yaml",
+  zip: "application/zip"
+};
+
 window.storage = idbKeyval;
+let $ = {};
+function render(root) {
+  let tree = [
+    renderTreeView(root),
+    ["tree-resizer"],
+    ["editor-view",
+      ["iframe$iframe", {frameBorder:0}]
+    ]
+  ]
+  document.body.textContent = "";
+  document.body.appendChild(domBuilder(tree, $));
+}
+
+function renderTreeView(root) {
+  return ["tree-view", {onclick:onClick},
+    ["ul",
+      renderTree("", "", root)
+    ]
+  ];
+  function onClick(evt) {
+    let node = evt.target;
+    while (!node.dataset.path) {
+      node = node.parentElement
+      if (node === document.body) return;
+    }
+    let data = node.dataset;
+    let url = `/${$.root}/${data.path}`;
+    $.iframe.setAttribute("src", url);
+  }
+}
+
+function renderTree(path, name, node) {
+  let entries = [];
+  for (let key in node) {
+    let subPath = (path ? path + "/" : "") + key;
+    let sub = node[key];
+    entries.push(
+      (sub.constructor === Object ? renderTree :
+       typeof sub === "string" ? renderLink :
+       renderFile)(subPath, key, sub)
+    );
+  }
+  let displayName = name || $.name;
+  let icon = "icon-down-dir";
+  return ["li",
+    { class: icon,
+      title: name,
+      'data-type': 'tree',
+      'data-name': name,
+      'data-path': path },
+    ["span.icon-folder", displayName],
+    ["ul"].concat(entries)
+  ];
+}
+function renderLink(path, name, target) {
+  let icon = "icon-link";
+  return ["li",
+    { title: target,
+      'data-type': 'link',
+      'data-target': target,
+      'data-name': name,
+      'data-path': path },
+    ["span", { class: icon }, name]
+  ];
+}
+function renderFile(path, name) {
+  let mime = guess(path);
+  let icon = guessIcon(mime);
+  return ["li",
+    { title: name,
+      'data-type': 'file',
+      'data-mime': mime,
+      'data-name': name,
+      'data-path': path },
+    ["span", { class: icon }, name]
+  ];
+}
+
+function guessIcon(mime) {
+  if (/^image/.test(mime)) return "icon-file-image";
+  if (/^audio/.test(mime)) return "icon-file-audio";
+  if (/^video/.test(mime)) return "icon-file-video";
+  if (/^video/.test(mime)) return "icon-file-video";
+  if (/^application.*(javascript|json|xml)$/.test(mime) ||
+      /^text.*(src|html|css|lua)$/.test(mime)) return "icon-file-code";
+  if (/^text/.test(mime)) return "icon-doc-text";
+  return "icon-doc";
+}
+
+// Register a service worker to serve it out as static content.
+navigator.serviceWorker.register("worker.js");
 
 run(function*() {
-  yield navigator.serviceWorker.register("worker.js");
-  let root = yield idbKeyval.get("root");
+
+  let match = window.location.hash.match(/github:\/\/([^\/]+)\/([^\/]+)\/refs\/(.+)$/);
+  let owner, repo, ref;
+  if (match) {
+    owner = match[1];
+    repo = match[2];
+    ref = match[3];
+  }
+  else {
+    owner = "creationix";
+    repo = "revision";
+    ref = "heads/master";
+  }
+  $.name = `${owner}/${repo}`;
+  let key = `github://${owner}/${repo}/refs/${ref}`;
+  window.location.hash = key;
+  // Import repository from github into local CAS graph
+  let root = yield idbKeyval.get(key);
   if (!root) {
-    let owner = "creationix";
-    let repo = "revision";
-    let ref = "heads/master";
     console.log(`Importing github://${owner}/${repo}/refs/${ref}`);
     let commit = yield* readCommit(owner, repo, ref);
-    console.log(commit);
     let link = yield* save(commit);
-    console.log(link);
     root = link.toHex();
-    yield idbKeyval.set("root", link.toHex());
+    yield idbKeyval.set(key, link.toHex());
   }
+  $.root = root;
 
-  let response = yield fetch(`/${root}/`);
-  let body = yield response.text();
-  console.log("Response", response.headers, body);
+  render(yield* load(root));
+
 }());
 
 }());
