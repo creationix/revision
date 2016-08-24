@@ -173,6 +173,7 @@ types = {
   tiff: "image/tiff",
   torrent: "application/x-bittorrent",
   tr: "text/troff",
+  ts: "application/x-typescript".
   ttf: "application/x-font-ttf",
   txt: "text/plain",
   vcf: "text/x-vcard",

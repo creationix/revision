@@ -90,7 +90,7 @@ function guessIcon(mime) {
   if (/^video/.test(mime)) return "icon-file-video";
   if (/^video/.test(mime)) return "icon-file-video";
   if (/^application.*(javascript|json|xml)$/.test(mime) ||
-      /^text.*(src|html|css|lua)$/.test(mime)) return "icon-file-code";
+      /^text.*(src|html|css|lua|script)$/.test(mime)) return "icon-file-code";
   if (/^text/.test(mime)) return "icon-doc-text";
   return "icon-doc";
 }
