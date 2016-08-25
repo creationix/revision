@@ -51,38 +51,37 @@ function renderTree(path, name, node) {
   }
   let displayName = name || $.name;
   let icon = "icon-down-dir";
-  return ["li",
-    { class: icon,
-      title: name,
+  return ["li", {class:icon},[".row",
+    { title: name,
       'data-type': 'tree',
       'data-name': name,
       'data-path': path },
-    ["span.icon-folder", displayName],
+    ["span.icon-folder", displayName]],
     ["ul"].concat(entries)
   ];
 }
 function renderLink(path, name, target) {
   let icon = "icon-link";
-  return ["li",
+  return ["li", [".row",
     { title: target,
       'data-type': 'link',
       'data-target': target,
       'data-name': name,
       'data-path': path },
     ["span", { class: icon }, name]
-  ];
+  ]];
 }
 function renderFile(path, name) {
   let mime = guess(path);
   let icon = guessIcon(mime);
-  return ["li",
+  return ["li", [".row",
     { title: name,
       'data-type': 'file',
       'data-mime': mime,
       'data-name': name,
       'data-path': path },
     ["span", { class: icon }, name]
-  ];
+  ]];
 }
 
 function guessIcon(mime) {
