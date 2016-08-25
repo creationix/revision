@@ -387,6 +387,8 @@ function decode(buf) {
 
 }
 
+// Register the Link type so we can serialize hashes as a new special type.
+// hash itself is just a 20 byte Uint8Array
 register(127, Link,
   (link) => { return link.hash; },
   (buf) => { return new Link(buf); }
@@ -405,7 +407,7 @@ function Link(hash) {
     if (!/^[0-9a-f]{40}$/.test(hash)) {
       throw new TypeError("Invalid string, expected hash");
     }
-    this.hash = new Uint8Array(32);
+    this.hash = new Uint8Array(20);
     let j = 0;
     for (let i = 0; i < 40; i += 2) {
       this.hash[j++] = parseInt(hash.substr(i, 2), 16);
@@ -427,9 +429,6 @@ Link.prototype.toHex = function toHex() {
   if (!hex) throw new Error("WAT")
   return hex;
 }
-
-
-// Look for links in an object
 
 let db;
 

@@ -2,7 +2,7 @@ import { register } from "./msgpack";
 import { load } from "./cas";
 
 // Register the Link type so we can serialize hashes as a new special type.
-// hash itself is just a 32 byte Uint8Array
+// hash itself is just a 20 byte Uint8Array
 register(127, Link,
   (link) => { return link.hash; },
   (buf) => { return new Link(buf); }
@@ -21,7 +21,7 @@ export function Link(hash) {
     if (!/^[0-9a-f]{40}$/.test(hash)) {
       throw new TypeError("Invalid string, expected hash");
     }
-    this.hash = new Uint8Array(32);
+    this.hash = new Uint8Array(20);
     let j = 0;
     for (let i = 0; i < 40; i += 2) {
       this.hash[j++] = parseInt(hash.substr(i, 2), 16);
