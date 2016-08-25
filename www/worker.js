@@ -533,7 +533,7 @@ types = {
 };
 
 const CACHE_NAME = 'v1';
-const routePattern = /^https?:\/\/[^\/]+\/([0-9a-f]{64})(\/.*)$/;
+const routePattern = /\/([0-9a-f]{64})(\/.*)$/;
 
 function wrap(gen) {
   return function (event) {
@@ -572,7 +572,8 @@ self.addEventListener('fetch', function (event) {
 
 function* serve(root, path) {
   let node = yield* root.resolve();
-  for (let part of path.split('/')) {
+  let part;
+  for (part of path.split('/')) {
     if (!part) continue;
     node = node[part];
     if (!node) {
@@ -583,7 +584,10 @@ function* serve(root, path) {
     // Render file
     let body = yield* node.resolve();
     return new Response(body, {
-      headers: { 'Content-Type': guess(path)}
+      headers: {
+        'Content-Type': guess(path),
+        'Content-Disposition': `inline; filename="${part}"`
+      }
     });
   }
   let html = `<h1>${path}</h1>`;
