@@ -1392,7 +1392,7 @@ function render(root) {
     renderTreeView(root),
     ["tree-resizer"],
     ["editor-view",
-      ["iframe$iframe", {frameBorder:0}]
+      ["iframe$iframe", {frameBorder:0,style:{display:"none"}}]
     ]
   ]
   document.body.textContent = "";
@@ -1414,6 +1414,7 @@ function renderTreeView(root) {
     let data = node.dataset;
     let url = `/${$.root}/${data.path}`;
     $.iframe.setAttribute("src", url);
+    $.iframe.style.display = "inherit";
   }
 }
 
@@ -1465,10 +1466,11 @@ function renderFile(path, name) {
 }
 
 function guessIcon(mime) {
+  if (/pdf$/.test(mime)) return "icon-file-pdf";
   if (/^image/.test(mime)) return "icon-file-image";
   if (/^audio/.test(mime)) return "icon-file-audio";
   if (/^video/.test(mime)) return "icon-file-video";
-  if (/^video/.test(mime)) return "icon-file-video";
+  if (/^zip2?$/.test(mime)) return "icon-file-archive";
   if (/^application.*(javascript|json|xml)$/.test(mime) ||
       /^text.*(src|html|css|lua|script)$/.test(mime)) return "icon-file-code";
   if (/^text/.test(mime)) return "icon-doc-text";

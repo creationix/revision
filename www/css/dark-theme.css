@@ -1,7 +1,32 @@
 tree-resizer {
-  background-color: #000;
+  background-color: rgb(92,92,92);
+}
+editor-view {
+  background-color: rgb(42,42,42);
+}
+iframe {
+  background-color: #fff;
 }
 tree-view {
-  background-color: #21252b;
-  color: #9da5b4;
+  background-color: rgb(36,36,36);
+  color: rgb(189,198,207);
 }
+tree-view .icon-up-dir:before,
+tree-view .icon-down-dir:before,
+tree-view .icon-left-dir:before,
+tree-view .icon-right-dir:before { color: rgb(145,145,145); }
+tree-view .icon-folder:before { color: rgb(180,98,25); }
+tree-view .icon-doc:before { color: rgb(170,170,170); }
+tree-view .icon-doc-text:before { color: rgb(93,176,215); }
+tree-view .icon-file-code:before { color: rgb(182,152,32); }
+tree-view .icon-file-pdf:before,
+tree-view .icon-file-image:before,
+tree-view .icon-file-audio:before,
+tree-view .icon-file-video:before { color: rgb(242,151,102); }
+tree-view .icon-file-archive:before { color: rgb(210,192,87); }
+tree-view .icon-link:before { color: rgb(154,127,213); }
+
+/*.blue { color: rgb(93,176,215); }
+.light-blue { color: rgb(155,187,220); }
+.type-icon { color: rgb(170,170,170); }
+.row { color: rgb(199,134,40); }*/
