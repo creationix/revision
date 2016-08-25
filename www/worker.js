@@ -505,13 +505,14 @@ types = {
   tiff: "image/tiff",
   torrent: "application/x-bittorrent",
   tr: "text/troff",
+  ts: "application/x-typescript",
   ttf: "application/x-font-ttf",
   txt: "text/plain",
   vcf: "text/x-vcard",
   vcs: "text/x-vcalendar",
   vrml: "model/vrml",
-  war   : "application/java-archive",
-  wav   : "audio/x-wav",
+  war: "application/java-archive",
+  wav: "audio/x-wav",
   webapp: "application/x-web-app-manifest+json",
   webm: "video/webm",
   wma: "audio/x-ms-wma",
@@ -570,17 +571,14 @@ self.addEventListener('fetch', function (event) {
 });
 
 function* serve(root, path) {
-  console.log("PATH", path);
   let node = yield* root.resolve();
   for (let part of path.split('/')) {
     if (!part) continue;
-    console.log(node, part);
     node = node[part];
     if (!node) {
       return new Response(`No such path: ${path}`);
     }
   }
-  console.log("NODE", node);
   if (node instanceof Link) {
     // Render file
     let body = yield* node.resolve();

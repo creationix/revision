@@ -64,17 +64,14 @@ function* passthrough(event) {
 }
 
 function* serve(root, path) {
-  console.log("PATH", path);
   let node = yield* root.resolve();
   for (let part of path.split('/')) {
     if (!part) continue;
-    console.log(node, part);
     node = node[part];
     if (!node) {
       return new Response(`No such path: ${path}`);
     }
   }
-  console.log("NODE", node);
   if (node instanceof Link) {
     // Render file
     let body = yield* node.resolve();

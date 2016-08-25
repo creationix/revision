@@ -32,7 +32,7 @@ function renderTreeView(root) {
       if (node === document.body) return;
     }
     let data = node.dataset;
-    let url = `/${$.root}/${data.path}`;
+    let url = `./${$.root}/${data.path}`;
     $.iframe.setAttribute("src", url);
   }
 }

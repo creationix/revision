@@ -1,0 +1,63 @@
+body {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+editor-view, tree-view {
+  overflow: auto;
+}
+editor-view {
+  flex: 1;
+  overflow: hidden;
+  height: 100%;
+}
+editor-view iframe {
+  width: 100%;
+  height: 100%;
+}
+tree-resizer {
+  width: 1px;
+}
+tree-view {
+  font-size: 12px;
+  -webkit-user-select: none;  /* Chrome all / Safari all */
+  -moz-user-select: none;     /* Firefox all */
+  -ms-user-select: none;      /* IE 10+ */
+  user-select: none;          /* Likely future */
+  cursor: default;
+}
+tree-view ul {
+  list-style-type: none;
+  margin: 0 5px 0 0;
+  padding: 0 0 0 35px;
+}
+
+tree-view > ul {
+  margin: 5px;
+  padding: 0;
+}
+
+tree-view li {
+  white-space: nowrap;
+  line-height: 2em;
+  font-size: 1em;
+  font-weight: 100;
+  font-family: 'Lucida Grande', 'Segoe UI', Ubuntu, Cantarell, sans-serif;
+
+}
+tree-view list-item {
+
+}
+tree-view span[class^="icon-"]::before {
+  font-size: 1.2em;
+  padding-right: 0.2em;
+}

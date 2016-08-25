@@ -1358,13 +1358,14 @@ types = {
   tiff: "image/tiff",
   torrent: "application/x-bittorrent",
   tr: "text/troff",
+  ts: "application/x-typescript",
   ttf: "application/x-font-ttf",
   txt: "text/plain",
   vcf: "text/x-vcard",
   vcs: "text/x-vcalendar",
   vrml: "model/vrml",
-  war   : "application/java-archive",
-  wav   : "audio/x-wav",
+  war: "application/java-archive",
+  wav: "audio/x-wav",
   webapp: "application/x-web-app-manifest+json",
   webm: "video/webm",
   wma: "audio/x-ms-wma",
@@ -1411,7 +1412,7 @@ function renderTreeView(root) {
       if (node === document.body) return;
     }
     let data = node.dataset;
-    let url = `/${$.root}/${data.path}`;
+    let url = `./${$.root}/${data.path}`;
     $.iframe.setAttribute("src", url);
   }
 }
@@ -1469,7 +1470,7 @@ function guessIcon(mime) {
   if (/^video/.test(mime)) return "icon-file-video";
   if (/^video/.test(mime)) return "icon-file-video";
   if (/^application.*(javascript|json|xml)$/.test(mime) ||
-      /^text.*(src|html|css|lua)$/.test(mime)) return "icon-file-code";
+      /^text.*(src|html|css|lua|script)$/.test(mime)) return "icon-file-code";
   if (/^text/.test(mime)) return "icon-doc-text";
   return "icon-doc";
 }
