@@ -3,7 +3,7 @@ import { Link } from "./link";
 import { guess } from "./mime";
 
 const CACHE_NAME = 'v1';
-const routePattern = /^https?:\/\/[^\/]+\/([0-9a-f]{64})(\/.*)$/;
+const routePattern = /^https?:\/\/[^\/]+\/([0-9a-f]{40})(\/.*)$/;
 
 function wrap(gen) {
   return function (event) {
@@ -15,10 +15,10 @@ self.addEventListener('install', wrap(function* () {
   let cache = yield caches.open(CACHE_NAME);
   yield cache.addAll([
     '/',
-    '/index.html',
     '/main.js',
     '/worker.js',
     '/css/dark-theme.css',
+    '/css/style.css',
     '/css/revision-icons.css'
   ]);
   yield self.skipWaiting();

@@ -1,10 +1,10 @@
 import { Link } from "./link";
 import { encode, decode } from "./msgpack";
 import { idbKeyval as storage } from "./idb-keyval";
-import { sha3_256 } from "./sha3";
+import { sha1 } from "./sha1";
 
 function digest(buf) {
-  return new Link(sha3_256.buffer(buf));
+  return new Link(sha1(buf));
 }
 
 export function* save(value) {

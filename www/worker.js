@@ -269,17 +269,6 @@ let idbKeyval = {
   }
 };
 
-/**
-* [js-sha3]{@link https://github.com/emn178/js-sha3}
-*
-* @version 0.5.2
-* @author Chen, Yi-Cyuan [emn178@gmail.com]
-* @copyright Chen, Yi-Cyuan 2015-2016
-* @license MIT
-*/
-
-var HEX_CHARS = '0123456789abcdef'.split('');
-
 function* load(link) {
   let hex = typeof link === "string" ?
     link : link.toHex();
@@ -301,12 +290,12 @@ function Link(hash) {
     return;
   }
   if (typeof hash === "string") {
-    if (!/^[0-9a-f]{64}$/.test(hash)) {
+    if (!/^[0-9a-f]{40}$/.test(hash)) {
       throw new TypeError("Invalid string, expected hash");
     }
     this.hash = new Uint8Array(32);
     let j = 0;
-    for (let i = 0; i < 64; i += 2) {
+    for (let i = 0; i < 40; i += 2) {
       this.hash[j++] = parseInt(hash.substr(i, 2), 16);
     }
     return;
@@ -533,7 +522,7 @@ types = {
 };
 
 const CACHE_NAME = 'v1';
-const routePattern = /^https?:\/\/[^\/]+\/([0-9a-f]{64})(\/.*)$/;
+const routePattern = /^https?:\/\/[^\/]+\/([0-9a-f]{40})(\/.*)$/;
 
 function wrap(gen) {
   return function (event) {
@@ -545,10 +534,10 @@ self.addEventListener('install', wrap(function* () {
   let cache = yield caches.open(CACHE_NAME);
   yield cache.addAll([
     '/',
-    '/index.html',
     '/main.js',
     '/worker.js',
     '/css/dark-theme.css',
+    '/css/style.css',
     '/css/revision-icons.css'
   ]);
   yield self.skipWaiting();

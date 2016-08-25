@@ -1,5 +1,5 @@
 import { run } from "./async";
-import { readCommit } from "./github";
+import { importCommit } from "./github";
 import { save, load } from "./cas";
 import { idbKeyval as storage } from "./idb-keyval";
 import { domBuilder } from "./dombuilder";
@@ -100,6 +100,26 @@ function guessIcon(mime) {
 // Register a service worker to serve it out as static content.
 navigator.serviceWorker.register("worker.js");
 
+let done = 0, total = 0;
+function onStart() {
+  total++;
+  onUpdate();
+}
+function onFinish() {
+  done++;
+  onUpdate();
+}
+let dirty = false;
+function onUpdate() {
+  if (dirty) return;
+  dirty = true;
+  requestAnimationFrame(update);
+}
+function update() {
+  document.body.innerHTML = `<div style="text-align:center"><h1>Importing from github (${done}/${total})</h1><progress class="import" max="${total}" value="${done}"></progress></div>`;
+  dirty = false;
+}
+
 run(function*() {
 
   let match = window.location.hash.match(/github:\/\/([^\/]+)\/([^\/]+)\/refs\/(.+)$/);
@@ -118,10 +138,10 @@ run(function*() {
   let key = `github://${owner}/${repo}/refs/${ref}`;
   window.location.hash = key;
   // Import repository from github into local CAS graph
-  let root = yield storage.get(key);
+  let root;// = yield storage.get(key);
   if (!root) {
     console.log(`Importing github://${owner}/${repo}/refs/${ref}`);
-    let commit = yield* readCommit(owner, repo, ref);
+    let commit = yield* importCommit(owner, repo, ref, onStart, onFinish);
     let link = yield* save(commit);
     root = link.toHex();
     yield storage.set(key, link.toHex());
