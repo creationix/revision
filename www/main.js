@@ -1164,8 +1164,9 @@ function renderTree(path, name, node) {
   }
   let displayName = name || $.name;
   let icon = "icon-down-dir";
-  return ["li", {class:icon},[".row",
+  return ["li", ["div",
     { title: name,
+      class: `row ${icon}`,
       'data-type': 'tree',
       'data-name': name,
       'data-path': path },
