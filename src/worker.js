@@ -3,7 +3,7 @@ import { Link } from "./link";
 import { guess } from "./mime";
 
 const CACHE_NAME = 'v1';
-const routePattern = /\/([0-9a-f]{64})(\/.*)$/;
+const routePattern = /^https?:\/\/[^\/]+\/([0-9a-f]{64})(\/.*)$/;
 
 function wrap(gen) {
   return function (event) {
