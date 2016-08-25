@@ -549,7 +549,7 @@ self.addEventListener('install', wrap(function* () {
     '/main.js',
     '/worker.js',
     '/css/dark-theme.css',
-    '/css/revision-icons-embedded.css'
+    '/css/revision-icons.css'
   ]);
   yield self.skipWaiting();
 }));
