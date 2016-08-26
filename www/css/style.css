@@ -1,3 +1,11 @@
+html {
+  box-sizing: border-box;
+}
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+
+
 body {
   margin: 0;
   padding: 0;
@@ -19,8 +27,9 @@ body {
   height: 100%;
 }
 
-editor-view, tree-view {
-  overflow: auto;
+tree-view {
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 editor-view {
   flex: 1;
@@ -41,27 +50,28 @@ tree-view {
   -ms-user-select: none;      /* IE 10+ */
   user-select: none;          /* Likely future */
   cursor: default;
+  padding: 5px 0 5px 0;
 }
 tree-view ul {
   list-style-type: none;
-  margin: 0 5px 0 0;
+  margin: 0;
   padding: 0 0 0 35px;
 }
 
 tree-view > ul {
-  margin: 5px;
   padding: 0;
 }
 
 tree-view .row {
-  display: inline-block;
+  display: block;
   white-space: nowrap;
   line-height: 2em;
   font-size: 1em;
   font-weight: 100;
   font-family: 'Lucida Grande', 'Segoe UI', Ubuntu, Cantarell, sans-serif;
-  margin: 0 -1000px 0 -1000px;
-  padding: 0 1000px 0 1000px;
+  margin-left: -1000px;
+  padding-left: 995px;
+  padding-right: 5px;
 }
 tree-view .row:hover {
   background-color: rgb(50,50,50);

@@ -23,6 +23,28 @@ tree-view .icon-file-video:before { color: rgb(242,151,102); }
 tree-view .icon-file-archive:before { color: rgb(210,192,87); }
 tree-view .icon-link:before { color: rgb(154,127,213); }
 
+tree-view ::-webkit-scrollbar {
+  border-right: 0;
+}
+
+::-webkit-scrollbar {
+  background-color: #242424;
+  width: 1em;
+  height: 1em;
+  margin: -2px;
+  border: solid 1px #333;
+}
+::-webkit-scrollbar, ::-webkit-scrollbar-thumb {
+  font-size: 16px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #333;
+  border: solid 1px #5c5c5c;
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+}
+
 /*.blue { color: rgb(93,176,215); }
 .light-blue { color: rgb(155,187,220); }
 .type-icon { color: rgb(170,170,170); }
