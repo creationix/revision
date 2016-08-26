@@ -6,7 +6,7 @@ require('weblit-app')
   port=1337,
   host="127.0.0.1"
 }
-.use(require('weblit-static')("../www"))
+.use(require('weblit-static')(require('uv').cwd() .. "/../www"))
 .websocket({
   protocol="cas-sync"
 }, function (req, read, write)
