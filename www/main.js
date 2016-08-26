@@ -1252,7 +1252,7 @@ run(function*() {
   let key = `github://${owner}/${repo}/refs/${ref}`;
   window.location.hash = key;
   // Import repository from github into local CAS graph
-  let root;// = yield storage.get(key);
+  let root = yield idbKeyval.get(key);
   if (!root) {
     console.log(`Importing github://${owner}/${repo}/refs/${ref}`);
     let commit = yield* importCommit(owner, repo, ref, onStart, onFinish);

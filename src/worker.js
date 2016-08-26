@@ -1,6 +1,7 @@
 import { run } from "./async";
 import { Link } from "./link";
 import { guess } from "./mime";
+import { pathJoin } from "./pathjoin";
 
 const CACHE_NAME = 'v1';
 const routePattern = /^https?:\/\/[^\/]+\/([0-9a-f]{40})(\/.*)$/;
@@ -32,7 +33,7 @@ self.addEventListener('activate', wrap(function* () {
 self.addEventListener('fetch', function (event) {
   return event.respondWith(run(function* () {
     let match = event.request.url.match(routePattern);
-    if (!match) return fetch(event.request);
+    if (!match) return yield* passthrough(event);
     let root = new Link(match[1]),
         path = match[2];
     return yield* serve(root, path);
@@ -41,25 +42,15 @@ self.addEventListener('fetch', function (event) {
 });
 
 function* passthrough(event) {
-  // IMPORTANT: Clone the request. A request is a stream and
-  // can only be consumed once. Since we are consuming this
-  // once by cache and once by the browser for fetch, we need
-  // to clone the response.
-  let response = yield fetch(event.request.clone());
-
-  // Check if we received a valid response
-  if(!response || response.status !== 200 || response.type !== 'basic') {
-    return response;
-  }
-
-  // IMPORTANT: Clone the response. A response is a stream
-  // and because we want the browser to consume the response
-  // as well as the cache consuming the response, we need
-  // to clone it so we have two streams.
-  var responseToCache = response.clone();
-
   let cache = yield caches.open(CACHE_NAME);
-  yield cache.put(event.request, responseToCache);
+  let response = yield cache.match(event.request);
+  if (!response) {
+    response = yield fetch(event.request.clone());
+    if(response && response.status === 200 && response.type === 'basic') {
+      var responseToCache = response.clone();
+      yield cache.put(event.request, responseToCache);
+    }
+  }
   return response;
 }
 
@@ -73,6 +64,8 @@ function* serve(root, path) {
       return new Response(`No such path: ${path}`);
     }
   }
+
+  // Serve files directly with guessed mime-type
   if (node instanceof Link) {
     // Render file
     let body = yield* node.resolve();
@@ -83,6 +76,13 @@ function* serve(root, path) {
       }
     });
   }
+
+  // Resolve symlinks by redirecting internally to target.
+  if (typeof node === "string") {
+    return yield* serve(root, pathJoin(path, "..", node));
+  }
+
+  // Render HTML directory for trees.
   let html = `<h1>${path}</h1>`;
   html += "<ul>";
   for (let name in node) {

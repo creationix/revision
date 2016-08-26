@@ -80,6 +80,3 @@ tree-view span[class^="icon-"]::before {
   font-size: 1.2em;
   padding-right: 0.2em;
 }
-iframe {
-  background-color: #fff;
-}

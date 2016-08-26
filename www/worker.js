@@ -275,8 +275,6 @@ function* load(link) {
   return decode(yield idbKeyval.get(hex));
 }
 
-// Register the Link type so we can serialize hashes as a new special type.
-// hash itself is just a 20 byte Uint8Array
 register(127, Link,
   (link) => { return link.hash; },
   (buf) => { return new Link(buf); }
@@ -317,6 +315,9 @@ Link.prototype.toHex = function toHex() {
   if (!hex) throw new Error("WAT")
   return hex;
 }
+
+
+// Look for links in an object
 
 // A simple mime database.
 let types;
@@ -520,6 +521,22 @@ types = {
   zip: "application/zip"
 };
 
+function pathJoin(base, ...parts) {
+  parts = (base + "/" + parts.join("/")).split(/\/+/);
+  let i = 0;
+  while (i < parts.length) {
+    let part = parts[i];
+    if (!part || part === '.') parts.splice(i, 1);
+    else if (part !== '..') i++;
+    else {
+      parts.splice(i - 1, 2);
+      i--;
+      if (i < 0) i = 0;
+    }
+  }
+  return (base[0] === '/' ? '/' : '') + parts.join("/");
+}
+
 const CACHE_NAME = 'v1';
 const routePattern = /^https?:\/\/[^\/]+\/([0-9a-f]{40})(\/.*)$/;
 
@@ -550,13 +567,26 @@ self.addEventListener('activate', wrap(function* () {
 self.addEventListener('fetch', function (event) {
   return event.respondWith(run(function* () {
     let match = event.request.url.match(routePattern);
-    if (!match) return fetch(event.request);
+    if (!match) return yield* passthrough(event);
     let root = new Link(match[1]),
         path = match[2];
     return yield* serve(root, path);
 
   }()));
 });
+
+function* passthrough(event) {
+  let cache = yield caches.open(CACHE_NAME);
+  let response = yield cache.match(event.request);
+  if (!response) {
+    response = yield fetch(event.request.clone());
+    if(response && response.status === 200 && response.type === 'basic') {
+      var responseToCache = response.clone();
+      yield cache.put(event.request, responseToCache);
+    }
+  }
+  return response;
+}
 
 function* serve(root, path) {
   let node = yield* root.resolve();
@@ -568,6 +598,8 @@ function* serve(root, path) {
       return new Response(`No such path: ${path}`);
     }
   }
+
+  // Serve files directly with guessed mime-type
   if (node instanceof Link) {
     // Render file
     let body = yield* node.resolve();
@@ -578,6 +610,13 @@ function* serve(root, path) {
       }
     });
   }
+
+  // Resolve symlinks by redirecting internally to target.
+  if (typeof node === "string") {
+    return yield* serve(root, pathJoin(path, "..", node));
+  }
+
+  // Render HTML directory for trees.
   let html = `<h1>${path}</h1>`;
   html += "<ul>";
   for (let name in node) {
