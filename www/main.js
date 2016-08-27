@@ -1153,7 +1153,12 @@ function renderTreeView(root) {
 
 function renderTree(path, name, node) {
   let entries = [];
-  for (let key in node) {
+  let keys = Object.keys(node).sort(function (a, b) {
+    var A = node[a].constructor === Object,
+        B = node[b].constructor === Object;
+    return A == B ? a.localeCompare(b) : A ? -1 : 1;
+  });
+  for (let key of keys) {
     let subPath = (path ? path + "/" : "") + key;
     let sub = node[key];
     entries.push(
