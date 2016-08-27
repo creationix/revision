@@ -55,11 +55,11 @@ tree-view {
 tree-view ul {
   list-style-type: none;
   margin: 0;
-  padding: 0 0 0 35px;
+  padding: 0 0 0 17px;
 }
 
 tree-view > ul {
-  padding: 0;
+  padding-left: 25px;
 }
 
 tree-view .row {
@@ -72,6 +72,10 @@ tree-view .row {
   margin-left: -1000px;
   padding-left: 995px;
   padding-right: 5px;
+}
+tree-view .row.icon-down-dir,
+tree-view .row.icon-right-dir {
+  margin-left: -1017px;
 }
 tree-view .row:hover {
   background-color: rgb(50,50,50);
