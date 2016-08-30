@@ -5,6 +5,15 @@
 //   hex - a string holding binary data as lowercase hexadecimal.
 //   b64 - a string holding binary data in base64 encoding.
 
+// Make working with Uint8Array less painful in node.js
+Uint8Array.prototype.inspect = function () {
+  let str = '';
+  for (let i = 0; i < this.length; i++) {
+    if (i >= 50) { str += '...'; break; }
+    str += (this[i] < 0x10 ? ' 0' : ' ') + this[i].toString(16);
+  }
+  return '<Uint8Array' + str + '>';
+}
 
 // Convert a raw string into a Uint8Array
 export function rawToBin(raw, start, end) {
@@ -199,8 +208,10 @@ export function flatten(parts) {
 }
 
 function count(value) {
+  if (value == null) return 0;
   if (typeof value === "number") return 1;
   if (typeof value === "string") return value.length;
+  if (value instanceof Uint8Array) return value.length;
   if (!Array.isArray(value)) {
     throw new TypeError("Bad type for flatten: " + typeof value);
   }
@@ -212,6 +223,7 @@ function count(value) {
 }
 
 function copy(buffer, offset, value) {
+  if (value == null) return offset;
   if (typeof value === "number") {
     buffer[offset++] = value;
     return offset;

@@ -1,7 +1,7 @@
-import { run } from "./async";
-import { guess } from "./mime";
-import { pathJoin } from "./pathjoin";
-import { Link } from "./cas-idb"
+import { run } from "./libs/async";
+import { guess } from "./libs/mime";
+import { pathJoin } from "./libs/pathjoin";
+import { Link } from "./libs/cas-idb"
 
 const CACHE_NAME = 'v1';
 const routePattern = /^https?:\/\/[^\/]+\/([0-9a-f]{40})(\/.*)$/;

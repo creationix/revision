@@ -1,7 +1,7 @@
-import { run } from "./async";
-import { importCommit } from "./github";
-import { save, load } from "./cas-idb";
-import { guess } from "./mime";
+import { run } from "./libs/async";
+import { importCommit } from "./libs/github";
+import { save, load } from "./libs/cas-idb";
+import { guess } from "./libs/mime";
 
 let $ = {};
 function render(root) {

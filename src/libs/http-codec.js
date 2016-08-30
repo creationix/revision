@@ -1,10 +1,10 @@
-import { indexOf, flatten } from "./binTools";
+import { indexOf, flatten, binToRaw } from "./binTools";
 export { encoder, decoder };
 
 // lua-style assert helper
 function assert(val, message) { if (!val) throw new Error(message); }
 
-let STATUS_CODES = {
+export let STATUS_CODES = {
   '100': 'Continue',
   '101': 'Switching Protocols',
   '102': 'Processing',                 // RFC 2518, obsoleted by RFC 4918
@@ -63,7 +63,7 @@ function encoder() {
   let mode;
 
   function encodeHead(item) {
-    if (!item || item === '') {
+    if (!item || item.constructor !== Object) {
       return item;
     }
     else if (typeof item !== 'object') {
@@ -140,6 +140,11 @@ function encoder() {
   return encode;
 }
 
+function slice(chunk, start, end) {
+  if (typeof end !== 'number') end = chunk.length;
+  if ((end - start) > 0) return chunk.slice(start, end);
+}
+
 function decoder() {
 
   // This decoder is somewhat stateful with 5 different parsing states.
@@ -162,8 +167,8 @@ function decoder() {
     // Parse the status/request line
     let head = {};
 
-    index = indexOf(chunk, "\n", 0) + 1;
-    let line = toString(chunk, 0, index);
+    index = indexOf(chunk, "\n") + 1;
+    let line = binToRaw(chunk, 0, index);
     let match = line.match(/^HTTP\/(\d\.\d) (\d+) ([^\r\n]+)/);
     if (match) {
       head.code = parseInt(match[2]);
@@ -190,7 +195,7 @@ function decoder() {
     // Parse the header lines
     let start = index;
     while ((index = indexOf(chunk, "\n", index) + 1)) {
-      line = toString(chunk, start, index);
+      line = binToRaw(chunk, start, index);
       if (line === '\r\n') break;
       start = index;
       match = line.match(/^([^:\r\n]+): *([^\r\n]+)/);
@@ -238,27 +243,36 @@ function decoder() {
   // This is used for inserting a single empty string into the output string for known empty bodies
   function decodeEmpty(chunk) {
     mode = decodeHead;
-    return ["", chunk || ""];
+    return [new Uint8Array(0), chunk];
   }
 
   function decodeRaw(chunk) {
-    if (!chunk) return [""];
+    if (!chunk) return [new Uint8Array(0)];
     if (chunk.length === 0) return;
-    return [chunk, ""];
+    return [chunk];
   }
 
   function decodeChunked(chunk) {
-    let match = chunk.match(/^([0-9a-f]+)([^][^])/i);
-    if (!match) return;
-    assert(match[2] === '\r\n', "Invalid chunk encoding header");
-    let length = parseInt(match[1], 16);
-    if (chunk.length < length + 4 + match[1].length) return;
-    if (length === 0) {
-      mode = decodeHead;
-    }
-    chunk = chunk.slice(match[0].length);
-    assert(indexOf(chunk, "\r\n") === 0, "Invalid chunk tail");
-    return [chunk.slice(0, length), chunk.slice(length + 2)];
+    // Make sure we have at least the length header
+    let index = indexOf(chunk, '\r\n');
+    if (index < 0) return;
+
+    // And parse it
+    let hex = binToRaw(chunk, 0, index);
+    let length = parseInt(hex, 16);
+
+    // Wait till we have the rest of the body
+    let start = hex.length + 2;
+    let end = start + length;
+    if (chunk.length < end + 2) return;
+
+    // An empty chunk means end of stream; reset state.
+    if (length === 0) mode = decodeHead;
+
+    // Make sure the chunk ends in '\r\n'
+    assert(binToRaw(chunk, end, end + 2) == '\r\n', 'Invalid chunk tail');
+
+    return [chunk.slice(start, end), slice(chunk, end + 2)];
   }
 
   function decodeCounted(chunk) {
@@ -268,19 +282,17 @@ function decoder() {
     }
     let length = chunk.length;
     // Make sure we have at least one byte to process
-    if (length === 0) return;
+    if (!length) return;
 
-    if (length >= bytesLeft) {
-      mode = decodeEmpty;
-    }
+    if (length >= bytesLeft) mode = decodeEmpty;
 
     // If the entire chunk fits, pass it all through
     if (length <= bytesLeft) {
       bytesLeft -= length;
-      return [chunk, ""];
+      return [chunk];
     }
 
-    return [chunk.slice(0, bytesLeft), chunk.slice(bytesLeft + 1)];
+    return [chunk.slice(0, bytesLeft), slice(chunk, bytesLeft + 1)];
   }
 
   // Switch between states by changing which decoder mode points to
