@@ -129,8 +129,8 @@ function realEncode(value) {
     let keys = Object.keys(value);
     let len = keys.length;
     if (len < 0x10) return [0x80|len, keys.map(pairMap, value)];
-    if (len < 0x10000) return [0xde, len, keys.map(pairMap, value)];
-    if (len < 0x100000000) return [0xdf, len, keys.map(pairMap, value)];
+    if (len < 0x10000) return [0xde, uint16(len), keys.map(pairMap, value)];
+    if (len < 0x100000000) return [0xdf, uint32(len), keys.map(pairMap, value)];
     tooLong(len, value);
   }
 
@@ -315,5 +315,4 @@ export function decode(buf) {
       default: throw new Error("Unexpected byte: " + first.toString(16));
     }
   }
-
 }

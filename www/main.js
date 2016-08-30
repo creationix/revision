@@ -1,7 +1,7 @@
 (function () {
 'use strict';
 
-// Usage: async(function* (...args) { yield promise... })(..args) -> Promise
+// Usage: run(iter) -> Promise
 function run(iter) {
   try { return handle(iter.next()); }
   catch (ex) { return Promise.reject(ex); }
@@ -76,12 +76,6 @@ for (let i = 0, l = codes.length; i < l; i++) {
   map[codes.charCodeAt(i)] = i;
 }
 
-// Loop over input 3 bytes at a time
-// a,b,c are 3 x 8-bit numbers
-// they are encoded into groups of 4 x 6-bit numbers
-// aaaaaa aabbbb bbbbcc cccccc
-// if there is no c, then pad the 4th with =
-// if there is also no b then pad the 3rd with =
 function strToBin(str) {
   return rawToBin(strToRaw(str));
 }
@@ -90,6 +84,14 @@ function binToStr(bin, start, end) {
   return rawToStr(binToRaw(bin, start, end));
 }
 
+// This takes nested lists of numbers, strings and array buffers and returns
+// a single buffer.  Numbers represent single bytes, strings are raw 8-bit
+// strings, and buffers represent themselves.
+// EX:
+//    1           -> <01>
+//    "Hi"        -> <48 69>
+//    [1, "Hi"]   -> <01 48 69>
+//    [[1],2,[3]] -> <01 02 03>
 function flatten(parts) {
   if (typeof parts === "number") return new Uint8Array([parts]);
   if (parts instanceof Uint8Array) return parts;
@@ -133,11 +135,6 @@ function copy(buffer, offset, value) {
   }
   return offset;
 }
-
-
-// indexOf for arrays/buffers.  Raw is a string in raw encoding.
-// returns -1 when not found.
-// start and end are indexes into buffer.  Default is 0 and length.
 
 let extensions = [];
 let extdex = {};
@@ -268,8 +265,8 @@ function realEncode(value) {
     let keys = Object.keys(value);
     let len = keys.length;
     if (len < 0x10) return [0x80|len, keys.map(pairMap, value)];
-    if (len < 0x10000) return [0xde, len, keys.map(pairMap, value)];
-    if (len < 0x100000000) return [0xdf, len, keys.map(pairMap, value)];
+    if (len < 0x10000) return [0xde, uint16(len), keys.map(pairMap, value)];
+    if (len < 0x100000000) return [0xdf, uint32(len), keys.map(pairMap, value)];
     tooLong(len, value);
   }
 
@@ -454,7 +451,6 @@ function decode(buf) {
       default: throw new Error("Unexpected byte: " + first.toString(16));
     }
   }
-
 }
 
 let shared = new Uint32Array(80);
@@ -607,6 +603,9 @@ function create(sync) {
 
 }
 
+// Consumers of this API must provide the following interface here.
+// function get(hash) -> promise<value>
+// function set(hash, value) -> promise
 let storage = {};
 
 // Register the Link type so we can serialize hashes as a new special type.
@@ -666,8 +665,6 @@ Link.prototype.toHex = function toHex() {
   if (!hex) throw new Error("WAT")
   return hex;
 };
-
-// Look for links in an object
 
 let db;
 
@@ -748,6 +745,7 @@ let idbKeyval = {
   }
 };
 
+// Hook up link's storage to use idbKeyval
 storage.get = idbKeyval.get;
 storage.set = idbKeyval.set;
 storage.clear = idbKeyval.clear;

@@ -1,7 +1,7 @@
 (function () {
 'use strict';
 
-// Usage: async(function* (...args) { yield promise... })(..args) -> Promise
+// Usage: run(iter) -> Promise
 function run(iter) {
   try { return handle(iter.next()); }
   catch (ex) { return Promise.reject(ex); }
@@ -250,7 +250,6 @@ Uint8Array.prototype.inspect = function () {
   return '<Uint8Array' + str + '>';
 }
 
-// Convert a raw string into a Uint8Array
 function binToRaw(bin, start, end) {
   if (!(bin instanceof Uint8Array)) bin = new Uint8Array(bin);
   start = start == null ? 0 : start | 0;
@@ -274,12 +273,6 @@ for (let i = 0, l = codes.length; i < l; i++) {
   map[codes.charCodeAt(i)] = i;
 }
 
-// Loop over input 3 bytes at a time
-// a,b,c are 3 x 8-bit numbers
-// they are encoded into groups of 4 x 6-bit numbers
-// aaaaaa aabbbb bbbbcc cccccc
-// if there is no c, then pad the 4th with =
-// if there is also no b then pad the 3rd with =
 function binToStr(bin, start, end) {
   return rawToStr(binToRaw(bin, start, end));
 }
@@ -454,9 +447,11 @@ function decode(buf) {
       default: throw new Error("Unexpected byte: " + first.toString(16));
     }
   }
-
 }
 
+// Consumers of this API must provide the following interface here.
+// function get(hash) -> promise<value>
+// function set(hash, value) -> promise
 let storage = {};
 
 // Register the Link type so we can serialize hashes as a new special type.
@@ -466,7 +461,7 @@ register(127, Link,
   (buf) => { return new Link(buf); }
 );
 
-// Save takes a value and serializes and stores it returning the link.
+// Load accepts a link or a string hash as input.
 function* load(link) {
   let hex = typeof link === "string" ?
     link : link.toHex();
@@ -508,8 +503,6 @@ Link.prototype.toHex = function toHex() {
   if (!hex) throw new Error("WAT")
   return hex;
 };
-
-// Look for links in an object
 
 let db;
 
