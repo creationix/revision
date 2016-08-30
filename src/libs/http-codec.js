@@ -1,4 +1,4 @@
-import { indexOf, flatten, binToRaw } from "./binTools";
+import { indexOf, flatten, binToRaw } from "./bintools";
 export { encoder, decoder };
 
 // lua-style assert helper

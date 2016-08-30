@@ -517,83 +517,6 @@ function concat(buffer, chunk) {
   return buffer ? flatten([buffer, chunk]) : chunk;
 }
 
-// TYPES:
-//   bin - a Uint8Array containing binary data.
-//   str - a normal unicode string.
-//   raw - a string where each character's charCode is a byte value. (utf-8)
-//   hex - a string holding binary data as lowercase hexadecimal.
-//   b64 - a string holding binary data in base64 encoding.
-
-// Make working with Uint8Array less painful in node.js
-Uint8Array.prototype.inspect = function () {
-  let str = '';
-  for (let i = 0; i < this.length; i++) {
-    if (i >= 50) { str += '...'; break; }
-    str += (this[i] < 0x10 ? ' 0' : ' ') + this[i].toString(16);
-  }
-  return '<Uint8Array' + str + '>';
-}
-
-const codes$1 =
-  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-// Reverse map from character code to 6-bit integer
-let map$1 = [];
-for (let i$1 = 0, l$1 = codes$1.length; i$1 < l$1; i$1++) {
-  map$1[codes$1.charCodeAt(i$1)] = i$1;
-}
-
-// This takes nested lists of numbers, strings and array buffers and returns
-// a single buffer.  Numbers represent single bytes, strings are raw 8-bit
-// strings, and buffers represent themselves.
-// EX:
-//    1           -> <01>
-//    "Hi"        -> <48 69>
-//    [1, "Hi"]   -> <01 48 69>
-//    [[1],2,[3]] -> <01 02 03>
-function flatten$1(parts) {
-  if (typeof parts === "number") return new Uint8Array([parts]);
-  if (parts instanceof Uint8Array) return parts;
-  let buffer = new Uint8Array(count$1(parts));
-  copy$1(buffer, 0, parts);
-  return buffer;
-}
-
-function count$1(value) {
-  if (value == null) return 0;
-  if (typeof value === "number") return 1;
-  if (typeof value === "string") return value.length;
-  if (value instanceof Uint8Array) return value.length;
-  if (!Array.isArray(value)) {
-    throw new TypeError("Bad type for flatten: " + typeof value);
-  }
-  let sum = 0;
-  for (let piece of value) {
-    sum += count$1(piece);
-  }
-  return sum;
-}
-
-function copy$1(buffer, offset, value) {
-  if (value == null) return offset;
-  if (typeof value === "number") {
-    buffer[offset++] = value;
-    return offset;
-  }
-  if (typeof value === "string") {
-    for (let i = 0, l = value.length; i < l; i++) {
-      buffer[offset++] = value.charCodeAt(i);
-    }
-    return offset;
-  }
-  if (value instanceof ArrayBuffer) {
-    value = new Uint8Array(value);
-  }
-  for (let piece of value) {
-    offset = copy$1(buffer, offset, piece);
-  }
-  return offset;
-}
-
 let shared = new Uint32Array(80);
 
 // Input chunks must be either arrays of bytes or "raw" encoded strings
@@ -1159,7 +1082,7 @@ class Server {
       }
 
       write(res.raw);
-      if (res.body) write(flatten$1(res.body));
+      if (res.body) write(flatten(res.body));
       write("");
       if (!chunk) break;
     }
@@ -1223,7 +1146,7 @@ function* autoHeaders(req, res, next) {
     headers.get("Connection").toLowerCase() === "keep-alive";
 
   if (res.body) {
-    let body = res.body = flatten$1(res.body);
+    let body = res.body = flatten(res.body);
     let needLength = !(headers.has("Content-Length") ||
                        headers.has("Transfer-Encoding"));
     if (needLength) {
