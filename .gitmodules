@@ -1,3 +1,0 @@
-[submodule "msgpack-es"]
-	path = msgpack-es
-	url = https://github.com/creationix/msgpack-es.git

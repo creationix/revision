@@ -1,11 +1,8 @@
 import { run } from "./async";
 import { importCommit } from "./github";
-import { save, load } from "./cas";
-import { idbKeyval as storage } from "./idb-keyval";
-import { domBuilder } from "./dombuilder";
+import { save, load } from "./cas-idb";
 import { guess } from "./mime";
 
-window.storage = storage;
 let $ = {};
 function render(root) {
   let tree = [

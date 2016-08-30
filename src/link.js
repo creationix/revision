@@ -1,5 +1,10 @@
-import { register } from "./msgpack";
-import { load } from "./cas";
+import { register, encode, decode } from "./msgpack";
+import { sha1 } from "./sha1";
+
+// Consumers of this API must provide the following interface here.
+// function get(hash) -> promise<value>
+// function set(hash, value) -> promise
+export let storage = {};
 
 // Register the Link type so we can serialize hashes as a new special type.
 // hash itself is just a 20 byte Uint8Array
@@ -7,6 +12,21 @@ register(127, Link,
   (link) => { return link.hash; },
   (buf) => { return new Link(buf); }
 );
+
+// Save takes a value and serializes and stores it returning the link.
+export function* save(value) {
+  let buf = encode(value);
+  let hex = sha1(buf);
+  yield storage.set(hex, buf);
+  return new Link(hex);
+}
+
+// Load accepts a link or a string hash as input.
+export function* load(link) {
+  let hex = typeof link === "string" ?
+    link : link.toHex();
+  return decode(yield storage.get(hex));
+}
 
 // Link has some nice methods in addition to storing the hash buffer.
 export function Link(hash) {
@@ -32,7 +52,7 @@ export function Link(hash) {
 }
 Link.prototype.resolve = function* resolve() {
   return yield* load(this);
-}
+};
 Link.prototype.toHex = function toHex() {
   let hex = "";
   let buf = this.hash;
@@ -42,8 +62,7 @@ Link.prototype.toHex = function toHex() {
   }
   if (!hex) throw new Error("WAT")
   return hex;
-}
-
+};
 
 // Look for links in an object
 export function scan(value, onLink) {

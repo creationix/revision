@@ -1,7 +1,7 @@
 import { run } from "./async";
-import { Link } from "./link";
 import { guess } from "./mime";
 import { pathJoin } from "./pathjoin";
+import { Link } from "./cas-idb"
 
 const CACHE_NAME = 'v1';
 const routePattern = /^https?:\/\/[^\/]+\/([0-9a-f]{40})(\/.*)$/;
@@ -18,6 +18,7 @@ self.addEventListener('install', wrap(function* () {
     '/',
     '/main.js',
     '/worker.js',
+    '/maquette.min.js',
     '/css/dark-theme.css',
     '/css/style.css',
     '/css/revision-icons.css'

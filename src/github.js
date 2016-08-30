@@ -1,6 +1,5 @@
-import { save } from "./cas";
+import { save, storage } from "./cas-idb";
 import { runAll } from "./async";
-import { idbKeyval as storage } from "./idb-keyval";
 
 function* get(path, format) {
   format = format || "json";

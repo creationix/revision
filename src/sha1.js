@@ -42,7 +42,6 @@ function create(sync) {
     }
   }
 
-
   function write(byte) {
     block[offset] |= (byte & 0xff) << shift;
     if (shift) {
