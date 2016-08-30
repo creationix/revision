@@ -146,12 +146,12 @@ export function strToBin(str) {
   return rawToBin(strToRaw(str));
 }
 
-export function binToStr(bin) {
-  return rawToStr(binToRaw(bin));
+export function binToStr(bin, start, end) {
+  return rawToStr(binToRaw(bin, start, end));
 }
 
-export function rawToHex(raw) {
-  return binToHex(rawToBin(raw));
+export function rawToHex(raw, start, end) {
+  return binToHex(rawToBin(raw, start, end));
 }
 
 export function hexToRaw(hex) {
@@ -186,8 +186,8 @@ export function b64ToRaw(b64) {
   return binToRaw(b64ToBin(b64));
 }
 
-export function rawToB64(raw) {
-  return binToB64(rawToBin(raw));
+export function rawToB64(raw, start, end) {
+  return binToB64(rawToBin(raw, start, end));
 }
 
 

@@ -1,7 +1,11 @@
 import { run } from "./libs/async";
 import { importCommit } from "./libs/github";
-import { save, load } from "./libs/cas-idb";
+import { save, load, storage } from "./libs/cas-idb";
 import { guess } from "./libs/mime";
+import { domBuilder } from "./libs/dombuilder";
+
+// Expose storage to browser for repl testing
+window.storage = storage;
 
 let $ = {};
 function render(root) {

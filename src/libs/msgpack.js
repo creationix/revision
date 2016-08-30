@@ -178,7 +178,7 @@ export function decode(buf) {
   }
 
   function readString(len) {
-    var str = binToStr(buffer, offset, len);
+    var str = binToStr(buffer, offset, offset + len);
     offset += len;
     return str;
   }
@@ -234,6 +234,9 @@ export function decode(buf) {
   }
 
   function realDecode() {
+    if (offset >= buffer.length) {
+      throw new Error("Unexpected end of msgpack buffer");
+    }
     let first = buffer[offset++];
     // positive fixint
     if (first < 0x80) return first;

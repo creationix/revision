@@ -6,9 +6,8 @@ new Server()
   .use(autoHeaders) // To ensure we send proper HTTP headers
   .use(files("."))  // To serve up the client-side app
   .route({          // To handle logic
-    path: "/:name",
     method: "GET",
-    host: "*"
+    path: "/:name"
   }, function* (req, res) {
     res.code = 200;
     res.body = `Hi ${req.params.name}!`;

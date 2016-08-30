@@ -195,7 +195,14 @@ export class Server {
       }
       let req = new Request(head, body);
       let res = new Response();
-      yield* this.runLayer(0, req, res);
+
+      try {
+        yield* this.runLayer(0, req, res);
+      }
+      catch (err) {
+        res.code = 500;
+        res.body = err.stack;
+      }
 
       write(res.raw);
       if (res.body) write(flatten(res.body));
@@ -287,26 +294,26 @@ export function* autoHeaders(req, res, next) {
   }
 }
 
-function readFile(path) {
-  return new Promise(function (resolve, reject) {
-    readFileNode(path, function (err, data) {
-      if (err) {
-        if (err.code === "ENOENT") return resolve();
-        return reject(err);
-      }
-      return resolve(data);
-    });
-  });
-}
-
 export function files(root) {
   let m = module;
   while (m.parent) m = m.parent;
   if (root[0] !== '/') root = pathJoin(m.filename, "..", root);
   return function* (req, res, next) {
     let path = pathJoin(root, req.pathname);
-    console.log(path);
-    let data = yield readFile(path);
+    let data = yield new Promise(function (resolve, reject) {
+      readFileNode(path, onRead);
+      function onRead(err, data) {
+        if (err) {
+          if (err.code === "ENOENT") return resolve();
+          if (err.code === "EISDIR") {
+            path = pathJoin(path, "index.html");
+            return readFileNode(path, onRead);
+          }
+          return reject(err);
+        }
+        return resolve(data);
+      }
+    });
     if (!data) return yield* next();
     res.code = 200;
     res.headers.set("Content-Type", guess(path));

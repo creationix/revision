@@ -19,19 +19,93 @@ function runAll(iters) {
   return Promise.all(iters.map(run));
 }
 
+// TYPES:
+//   bin - a Uint8Array containing binary data.
+//   str - a normal unicode string.
+//   raw - a string where each character's charCode is a byte value. (utf-8)
+//   hex - a string holding binary data as lowercase hexadecimal.
+//   b64 - a string holding binary data in base64 encoding.
+
+// Make working with Uint8Array less painful in node.js
+Uint8Array.prototype.inspect = function () {
+  let str = '';
+  for (let i = 0; i < this.length; i++) {
+    if (i >= 50) { str += '...'; break; }
+    str += (this[i] < 0x10 ? ' 0' : ' ') + this[i].toString(16);
+  }
+  return '<Uint8Array' + str + '>';
+}
+
+// Convert a raw string into a Uint8Array
+function rawToBin(raw, start, end) {
+  raw = '' + raw;
+  start = start == null ? 0 : start | 0;
+  end = end == null ? raw.length : end | 0;
+  let len = end - start;
+  let bin = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bin[i] = raw.charCodeAt(i + start);
+  }
+  return bin;
+}
+
+function binToRaw(bin, start, end) {
+  if (!(bin instanceof Uint8Array)) bin = new Uint8Array(bin);
+  start = start == null ? 0 : start | 0;
+  end = end == null ? bin.length : end | 0;
+  let raw = '';
+  for (let i = start || 0; i < end; i++) {
+    raw += String.fromCharCode(bin[i]);
+  }
+  return raw;
+}
+
+function strToRaw(str) {
+  return unescape(encodeURIComponent(str));
+}
+
+function rawToStr(raw) {
+  return decodeURIComponent(escape(raw));
+}
+
+const codes =
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+// Reverse map from character code to 6-bit integer
+let map = [];
+for (let i = 0, l = codes.length; i < l; i++) {
+  map[codes.charCodeAt(i)] = i;
+}
+
+// Loop over input 3 bytes at a time
+// a,b,c are 3 x 8-bit numbers
+// they are encoded into groups of 4 x 6-bit numbers
+// aaaaaa aabbbb bbbbcc cccccc
+// if there is no c, then pad the 4th with =
+// if there is also no b then pad the 3rd with =
+function strToBin(str) {
+  return rawToBin(strToRaw(str));
+}
+
+function binToStr(bin, start, end) {
+  return rawToStr(binToRaw(bin, start, end));
+}
+
 function flatten(parts) {
   if (typeof parts === "number") return new Uint8Array([parts]);
   if (parts instanceof Uint8Array) return parts;
-  if (!Array.isArray(parts)) {
-    throw new TypeError("Bad type for flatten: " + typeof parts);
-  }
   let buffer = new Uint8Array(count(parts));
   copy(buffer, 0, parts);
   return buffer;
 }
 
 function count(value) {
+  if (value == null) return 0;
   if (typeof value === "number") return 1;
+  if (typeof value === "string") return value.length;
+  if (value instanceof Uint8Array) return value.length;
+  if (!Array.isArray(value)) {
+    throw new TypeError("Bad type for flatten: " + typeof value);
+  }
   let sum = 0;
   for (let piece of value) {
     sum += count(piece);
@@ -40,8 +114,15 @@ function count(value) {
 }
 
 function copy(buffer, offset, value) {
+  if (value == null) return offset;
   if (typeof value === "number") {
     buffer[offset++] = value;
+    return offset;
+  }
+  if (typeof value === "string") {
+    for (let i = 0, l = value.length; i < l; i++) {
+      buffer[offset++] = value.charCodeAt(i);
+    }
     return offset;
   }
   if (value instanceof ArrayBuffer) {
@@ -52,6 +133,11 @@ function copy(buffer, offset, value) {
   }
   return offset;
 }
+
+
+// indexOf for arrays/buffers.  Raw is a string in raw encoding.
+// returns -1 when not found.
+// start and end are indexes into buffer.  Default is 0 and length.
 
 let extensions = [];
 let extdex = {};
@@ -104,23 +190,6 @@ function pairMap(key) {
   ];
 }
 
-function encode_utf8(s) {
-  return unescape(encodeURIComponent(s));
-}
-function decode_utf8(s) {
-  return decodeURIComponent(escape(s));
-}
-function stringToBuffer(str) {
-  return rawToBuffer(encode_utf8(str));
-}
-function rawToBuffer(raw) {
-  let len = raw.length;
-  let buf = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    buf[i] = raw.charCodeAt(i);
-  }
-  return buf;
-}
 
 function tooLong(len, value) {
   throw new TypeError("Value is too long: " + (typeof value) + "/" + len);
@@ -166,7 +235,7 @@ function realEncode(value) {
 
   // str format family
   if (value.constructor === String) {
-    value = stringToBuffer(value);
+    value = strToBin(value);
     let len = value.length;
     if (len < 0x20) return [0xa0|len, value];
     if (len < 0x100) return [0xd9, len, value];
@@ -248,11 +317,9 @@ function decode(buf) {
   }
 
   function readString(len) {
-    var str = "";
-    while (len--) {
-      str += String.fromCharCode(buffer[offset++]);
-    }
-    return decode_utf8(str);
+    var str = binToStr(buffer, offset, offset + len);
+    offset += len;
+    return str;
   }
 
   function readBin(len) {
@@ -306,6 +373,9 @@ function decode(buf) {
   }
 
   function realDecode() {
+    if (offset >= buffer.length) {
+      throw new Error("Unexpected end of msgpack buffer");
+    }
     let first = buffer[offset++];
     // positive fixint
     if (first < 0x80) return first;
@@ -387,129 +457,6 @@ function decode(buf) {
 
 }
 
-register(127, Link,
-  (link) => { return link.hash; },
-  (buf) => { return new Link(buf); }
-);
-
-// Link has some nice methods in addition to storing the hash buffer.
-function Link(hash) {
-  if (hash.constructor === ArrayBuffer) {
-    hash = new Uint8Array(hash);
-  }
-  if (hash.constructor === Uint8Array) {
-    this.hash = hash;
-    return;
-  }
-  if (typeof hash === "string") {
-    if (!/^[0-9a-f]{40}$/.test(hash)) {
-      throw new TypeError("Invalid string, expected hash");
-    }
-    this.hash = new Uint8Array(20);
-    let j = 0;
-    for (let i = 0; i < 40; i += 2) {
-      this.hash[j++] = parseInt(hash.substr(i, 2), 16);
-    }
-    return;
-  }
-  throw new TypeError("Invalid hash, expected string or buffer");
-}
-Link.prototype.resolve = function* resolve() {
-  return yield* load(this);
-}
-Link.prototype.toHex = function toHex() {
-  let hex = "";
-  let buf = this.hash;
-  for (let i = 0, l = buf.length; i < l; i++) {
-    let byte = buf[i];
-    hex += (byte < 0x10 ? "0" : "") + byte.toString(16);
-  }
-  if (!hex) throw new Error("WAT")
-  return hex;
-}
-
-
-// Look for links in an object
-
-let db;
-
-function getDB() {
-  if (!db) {
-    db = new Promise(function(resolve, reject) {
-      let openreq = indexedDB.open('keyval-store', 1);
-
-      openreq.onerror = function() {
-        reject(openreq.error);
-      };
-
-      openreq.onupgradeneeded = function() {
-        // First time setup: create an empty object store
-        openreq.result.createObjectStore('keyval');
-      };
-
-      openreq.onsuccess = function() {
-        resolve(openreq.result);
-      };
-    });
-  }
-  return db;
-}
-
-function withStore(type, callback) {
-  return getDB().then(function(db) {
-    return new Promise(function(resolve, reject) {
-      let transaction = db.transaction('keyval', type);
-      transaction.oncomplete = function() {
-        resolve();
-      };
-      transaction.onerror = function() {
-        reject(transaction.error);
-      };
-      callback(transaction.objectStore('keyval'));
-    });
-  });
-}
-
-let idbKeyval = {
-  get: function(key) {
-    let req;
-    return withStore('readonly', function(store) {
-      req = store.get(key);
-    }).then(function() {
-      return req.result;
-    });
-  },
-  set: function(key, value) {
-    return withStore('readwrite', function(store) {
-      store.put(value, key);
-    });
-  },
-  delete: function(key) {
-    return withStore('readwrite', function(store) {
-      store.delete(key);
-    });
-  },
-  clear: function() {
-    return withStore('readwrite', function(store) {
-      store.clear();
-    });
-  },
-  keys: function() {
-    let keys = [];
-    return withStore('readonly', function(store) {
-      // This would be store.getAllKeys(), but it isn't supported by Edge or Safari.
-      // And openKeyCursor isn't supported by Safari.
-      (store.openKeyCursor || store.openCursor).call(store).onsuccess = function() {
-        if (!this.result) return;
-        keys.push(this.result.key);
-        this.result.continue();
-      };
-    }).then(function() {
-      return keys;
-    });
-  }
-};
-
 let shared = new Uint32Array(80);
 
 // Input chunks must be either arrays of bytes or "raw" encoded strings
@@ -552,7 +499,6 @@ function create(sync) {
       write(string.charCodeAt(i));
     }
   }
-
 
   function write(byte) {
     block[offset] |= (byte & 0xff) << shift;
@@ -661,22 +607,150 @@ function create(sync) {
 
 }
 
-function digest(buf) {
-  return new Link(sha1(buf));
-}
+let storage = {};
 
+// Register the Link type so we can serialize hashes as a new special type.
+// hash itself is just a 20 byte Uint8Array
+register(127, Link,
+  (link) => { return link.hash; },
+  (buf) => { return new Link(buf); }
+);
+
+// Save takes a value and serializes and stores it returning the link.
 function* save(value) {
   let buf = encode(value);
-  let link = digest(buf);
-  yield idbKeyval.set(link.toHex(), buf);
-  return link;
+  let hex = sha1(buf);
+  yield storage.set(hex, buf);
+  return new Link(hex);
 }
 
+// Load accepts a link or a string hash as input.
 function* load(link) {
   let hex = typeof link === "string" ?
     link : link.toHex();
-  return decode(yield idbKeyval.get(hex));
+  return decode(yield storage.get(hex));
 }
+
+// Link has some nice methods in addition to storing the hash buffer.
+function Link(hash) {
+  if (hash.constructor === ArrayBuffer) {
+    hash = new Uint8Array(hash);
+  }
+  if (hash.constructor === Uint8Array) {
+    this.hash = hash;
+    return;
+  }
+  if (typeof hash === "string") {
+    if (!/^[0-9a-f]{40}$/.test(hash)) {
+      throw new TypeError("Invalid string, expected hash");
+    }
+    this.hash = new Uint8Array(20);
+    let j = 0;
+    for (let i = 0; i < 40; i += 2) {
+      this.hash[j++] = parseInt(hash.substr(i, 2), 16);
+    }
+    return;
+  }
+  throw new TypeError("Invalid hash, expected string or buffer");
+}
+Link.prototype.resolve = function* resolve() {
+  return yield* load(this);
+};
+Link.prototype.toHex = function toHex() {
+  let hex = "";
+  let buf = this.hash;
+  for (let i = 0, l = buf.length; i < l; i++) {
+    let byte = buf[i];
+    hex += (byte < 0x10 ? "0" : "") + byte.toString(16);
+  }
+  if (!hex) throw new Error("WAT")
+  return hex;
+};
+
+// Look for links in an object
+
+let db;
+
+function getDB() {
+  if (!db) {
+    db = new Promise(function(resolve, reject) {
+      let openreq = indexedDB.open('keyval-store', 1);
+
+      openreq.onerror = function() {
+        reject(openreq.error);
+      };
+
+      openreq.onupgradeneeded = function() {
+        // First time setup: create an empty object store
+        openreq.result.createObjectStore('keyval');
+      };
+
+      openreq.onsuccess = function() {
+        resolve(openreq.result);
+      };
+    });
+  }
+  return db;
+}
+
+function withStore(type, callback) {
+  return getDB().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      let transaction = db.transaction('keyval', type);
+      transaction.oncomplete = function() {
+        resolve();
+      };
+      transaction.onerror = function() {
+        reject(transaction.error);
+      };
+      callback(transaction.objectStore('keyval'));
+    });
+  });
+}
+
+let idbKeyval = {
+  get: function(key) {
+    let req;
+    return withStore('readonly', function(store) {
+      req = store.get(key);
+    }).then(function() {
+      return req.result;
+    });
+  },
+  set: function(key, value) {
+    return withStore('readwrite', function(store) {
+      store.put(value, key);
+    });
+  },
+  delete: function(key) {
+    return withStore('readwrite', function(store) {
+      store.delete(key);
+    });
+  },
+  clear: function() {
+    return withStore('readwrite', function(store) {
+      store.clear();
+    });
+  },
+  keys: function() {
+    let keys = [];
+    return withStore('readonly', function(store) {
+      // This would be store.getAllKeys(), but it isn't supported by Edge or Safari.
+      // And openKeyCursor isn't supported by Safari.
+      (store.openKeyCursor || store.openCursor).call(store).onsuccess = function() {
+        if (!this.result) return;
+        keys.push(this.result.key);
+        this.result.continue();
+      };
+    }).then(function() {
+      return keys;
+    });
+  }
+};
+
+storage.get = idbKeyval.get;
+storage.set = idbKeyval.set;
+storage.clear = idbKeyval.clear;
 
 function* get(path, format) {
   format = format || "json";
@@ -686,12 +760,12 @@ function* get(path, format) {
       "application/vnd.github.v3.raw" :
       "application/vnd.github.v3+json"
   };
-  let username = (yield idbKeyval.get("GITHUB_USERNAME")) ||
+  let username = (yield storage.get("GITHUB_USERNAME")) ||
     prompt("Enter github username (for API auth)");
-  if (username) yield idbKeyval.set("GITHUB_USERNAME", username);
-  let token = (yield idbKeyval.get("GITHUB_TOKEN")) ||
+  if (username) yield storage.set("GITHUB_USERNAME", username);
+  let token = (yield storage.get("GITHUB_TOKEN")) ||
     prompt("Enter personal access token (for API auth)");
-  if (token) yield idbKeyval.set("GITHUB_TOKEN", token);
+  if (token) yield storage.set("GITHUB_TOKEN", token);
   headers.Authorization = `Basic ${btoa(`${username}:${token}`)}`;
   let res = yield fetch(url, {headers:headers});
   return res && (yield res[format]());
@@ -821,99 +895,6 @@ function* importCommit(owner, repo, rootSha, onStart, onFinish) {
     // Throw away the submodule information and return the tree.
     return yield* importCommit(match[1], match[2], sha, onStart, onFinish);
   }
-}
-
-//////////////////////////////////////
-//                                  //
-// JS domBuilder Library            //
-//                                  //
-// Tim Caswell <tim@creationix.com> //
-//                                  //
-//////////////////////////////////////
-
-function domBuilder(json, refs) {
-
-  // Render strings as text nodes
-  if (typeof json === 'string') return document.createTextNode(json);
-
-  // Pass through html elements and text nodes as-is
-  if (json instanceof HTMLElement || json instanceof window.Text) return json;
-
-  // Stringify any other value types
-  if (!Array.isArray(json)) return document.createTextNode(json + "");
-
-  // Empty arrays are just empty fragments.
-  if (!json.length) return document.createDocumentFragment();
-
-  var node, first;
-  for (var i = 0, l = json.length; i < l; i++) {
-    var part = json[i];
-
-    if (!node) {
-      if (typeof part === 'string') {
-        // Create a new dom node by parsing the tagline
-        var tag = part.match(TAG_MATCH);
-        tag = tag ? tag[0] : "div";
-        node = document.createElement(tag);
-        first = true;
-        var classes = part.match(CLASS_MATCH);
-        if (classes) node.setAttribute('class', classes.map(stripFirst).join(' '));
-        var id = part.match(ID_MATCH);
-        if (id) node.setAttribute('id', id[0].substr(1));
-        var ref = part.match(REF_MATCH);
-        if (refs && ref) refs[ref[0].substr(1)] = node;
-        continue;
-      } else if (typeof part === "function") {
-        return domBuilder(part.apply(null, json.slice(i + 1)), refs);
-      } else {
-        node = document.createDocumentFragment();
-      }
-    }
-
-    // Except the first item if it's an attribute object
-    if (first && typeof part === 'object' && part.constructor === Object) {
-      setAttrs(node, part);
-    } else {
-      node.appendChild(domBuilder(part, refs));
-    }
-    first = false;
-  }
-  return node;
-}
-
-function setAttrs(node, attrs) {
-  var keys = Object.keys(attrs);
-  for (var i = 0, l = keys.length; i < l; i++) {
-    var key = keys[i];
-    var value = attrs[key];
-    if (key === "$") {
-      value(node);
-    } else if (key === "css" || key === "style" && value.constructor === Object) {
-      setStyle(node.style, value);
-    } else if (key.substr(0, 2) === "on") {
-      node.addEventListener(key.substr(2), value, false);
-    } else if (typeof value === "boolean") {
-      if (value) node.setAttribute(key, key);
-    } else {
-      node.setAttribute(key, value);
-    }
-  }
-}
-
-function setStyle(style, attrs) {
-  var keys = Object.keys(attrs);
-  for (var i = 0, l = keys.length; i < l; i++) {
-    var key = keys[i];
-    style[key] = attrs[key];
-  }
-}
-
-var CLASS_MATCH = /\.[^.#$]+/g;
-var ID_MATCH = /#[^.#$]+/;
-var REF_MATCH = /\$[^.#$]+/;
-var TAG_MATCH = /^[^.#$]+/;
-function stripFirst(part) {
-  return part.substr(1);
 }
 
 // A simple mime database.
@@ -1118,7 +1099,102 @@ types = {
   zip: "application/zip"
 };
 
-window.storage = idbKeyval;
+//////////////////////////////////////
+//                                  //
+// JS domBuilder Library            //
+//                                  //
+// Tim Caswell <tim@creationix.com> //
+//                                  //
+//////////////////////////////////////
+
+function domBuilder(json, refs) {
+
+  // Render strings as text nodes
+  if (typeof json === 'string') return document.createTextNode(json);
+
+  // Pass through html elements and text nodes as-is
+  if (json instanceof HTMLElement || json instanceof window.Text) return json;
+
+  // Stringify any other value types
+  if (!Array.isArray(json)) return document.createTextNode(json + "");
+
+  // Empty arrays are just empty fragments.
+  if (!json.length) return document.createDocumentFragment();
+
+  var node, first;
+  for (var i = 0, l = json.length; i < l; i++) {
+    var part = json[i];
+
+    if (!node) {
+      if (typeof part === 'string') {
+        // Create a new dom node by parsing the tagline
+        var tag = part.match(TAG_MATCH);
+        tag = tag ? tag[0] : "div";
+        node = document.createElement(tag);
+        first = true;
+        var classes = part.match(CLASS_MATCH);
+        if (classes) node.setAttribute('class', classes.map(stripFirst).join(' '));
+        var id = part.match(ID_MATCH);
+        if (id) node.setAttribute('id', id[0].substr(1));
+        var ref = part.match(REF_MATCH);
+        if (refs && ref) refs[ref[0].substr(1)] = node;
+        continue;
+      } else if (typeof part === "function") {
+        return domBuilder(part.apply(null, json.slice(i + 1)), refs);
+      } else {
+        node = document.createDocumentFragment();
+      }
+    }
+
+    // Except the first item if it's an attribute object
+    if (first && typeof part === 'object' && part.constructor === Object) {
+      setAttrs(node, part);
+    } else {
+      node.appendChild(domBuilder(part, refs));
+    }
+    first = false;
+  }
+  return node;
+}
+
+function setAttrs(node, attrs) {
+  var keys = Object.keys(attrs);
+  for (var i = 0, l = keys.length; i < l; i++) {
+    var key = keys[i];
+    var value = attrs[key];
+    if (key === "$") {
+      value(node);
+    } else if (key === "css" || key === "style" && value.constructor === Object) {
+      setStyle(node.style, value);
+    } else if (key.substr(0, 2) === "on") {
+      node.addEventListener(key.substr(2), value, false);
+    } else if (typeof value === "boolean") {
+      if (value) node.setAttribute(key, key);
+    } else {
+      node.setAttribute(key, value);
+    }
+  }
+}
+
+function setStyle(style, attrs) {
+  var keys = Object.keys(attrs);
+  for (var i = 0, l = keys.length; i < l; i++) {
+    var key = keys[i];
+    style[key] = attrs[key];
+  }
+}
+
+var CLASS_MATCH = /\.[^.#$]+/g;
+var ID_MATCH = /#[^.#$]+/;
+var REF_MATCH = /\$[^.#$]+/;
+var TAG_MATCH = /^[^.#$]+/;
+function stripFirst(part) {
+  return part.substr(1);
+}
+
+// Expose storage to browser for repl testing
+window.storage = storage;
+
 let $ = {};
 function render(root) {
   let tree = [
@@ -1257,13 +1333,13 @@ run(function*() {
   let key = `github://${owner}/${repo}/refs/${ref}`;
   window.location.hash = key;
   // Import repository from github into local CAS graph
-  let root = yield idbKeyval.get(key);
+  let root = yield storage.get(key);
   if (!root) {
     console.log(`Importing github://${owner}/${repo}/refs/${ref}`);
     let commit = yield* importCommit(owner, repo, ref, onStart, onFinish);
     let link = yield* save(commit);
     root = link.toHex();
-    yield idbKeyval.set(key, link.toHex());
+    yield storage.set(key, link.toHex());
   }
   $.root = root;
 
