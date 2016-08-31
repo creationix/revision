@@ -1,6 +1,5 @@
 FILES = $(wildcard src/**/*.js) $(wildcard src/*.js)
 
-
 all: server.js www/main.js www/worker.js
 
 serve: all

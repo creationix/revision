@@ -57,12 +57,13 @@ export class Link {
 }
 
 // Look for links in an object
-export function scan() {
+export function scan(obj) {
   let links = [];
-  find(this);
+  find(obj);
   return links;
 
   function find(obj) {
+
     if (!obj) return;
     if (obj instanceof Link) {
       links.push(obj);

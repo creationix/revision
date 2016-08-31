@@ -1,8 +1,6 @@
 import { indexOf, flatten, binToRaw } from "./bintools";
+import { assert } from "./assert";
 export { encoder, decoder };
-
-// lua-style assert helper
-function assert(val, message) { if (!val) throw new Error(message); }
 
 export let STATUS_CODES = {
   '100': 'Continue',
@@ -140,10 +138,6 @@ function encoder() {
   return encode;
 }
 
-function slice(chunk, start, end) {
-  if (typeof end !== 'number') end = chunk.length;
-  if ((end - start) > 0) return chunk.slice(start, end);
-}
 
 function decoder() {
 
@@ -272,7 +266,7 @@ function decoder() {
     // Make sure the chunk ends in '\r\n'
     assert(binToRaw(chunk, end, end + 2) == '\r\n', 'Invalid chunk tail');
 
-    return [chunk.slice(start, end), slice(chunk, end + 2)];
+    return [chunk.slice(start, end), chunk.slice(end + 2)];
   }
 
   function decodeCounted(chunk) {
@@ -292,7 +286,7 @@ function decoder() {
       return [chunk];
     }
 
-    return [chunk.slice(0, bytesLeft), slice(chunk, bytesLeft + 1)];
+    return [chunk.slice(0, bytesLeft), chunk.slice(bytesLeft + 1)];
   }
 
   // Switch between states by changing which decoder mode points to
@@ -305,5 +299,5 @@ function decoder() {
 }
 
 function concat(buffer, chunk) {
-  return buffer ? flatten([buffer, chunk]) : chunk;
+  return (buffer && buffer.length) ? flatten([buffer, chunk]) : chunk;
 }

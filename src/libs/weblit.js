@@ -2,6 +2,7 @@ import { createServer as createNetServer } from "net";
 import { run } from "./async";
 import { makeRead, makeWrite } from "./gen-channel";
 import { decoder, encoder } from "./http-codec";
+import { encode, decode, acceptKey } from "./websocket-codec";
 import { flatten } from "./bintools";
 import { sha1 } from "./sha1";
 import { readFile as readFileNode } from "fs";
@@ -54,13 +55,14 @@ class Headers {
 }
 
 export class Request {
-  constructor (head) {
+  constructor (head, body) {
     head = head || {};
     this.method = head.method || 'GET';
     this.path = head.path || "/";
     this.version = head.version || 1.1;
     this.keepAlive = head.keepAlive || false;
     this.headers = new Headers(head.headers);
+    this.body = body;
   }
   get raw() {
     return {
@@ -205,6 +207,13 @@ export class Server {
       }
 
       write(res.raw);
+
+      if (res.upgrade) {
+        read.updateDecode(decode);
+        write.updateEncode(encode);
+        yield* res.upgrade(req, read, write);
+      }
+
       if (res.body) write(flatten(res.body));
       write("");
       if (!chunk) break;
@@ -213,7 +222,6 @@ export class Server {
   }
   *runLayer(index, req, res) {
     let layer = this.layers[index];
-    console.log(layer);
     if (!layer) return;
     let self = this;
     return yield* layer(req, res, function*() {
@@ -249,6 +257,10 @@ export function* autoHeaders(req, res, next) {
   req.pathname = pathname;
   if (query) {
     req.query = parseQuery(query);
+  }
+
+  if (req.body) {
+    req.body = flatten(req.body);
   }
 
   let requested = req.headers.get('If-None-Match');
@@ -299,6 +311,7 @@ export function files(root) {
   while (m.parent) m = m.parent;
   if (root[0] !== '/') root = pathJoin(m.filename, "..", root);
   return function* (req, res, next) {
+    if (req.method !== 'GET') return yield* next();
     let path = pathJoin(root, req.pathname);
     let data = yield new Promise(function (resolve, reject) {
       readFileNode(path, onRead);
@@ -318,5 +331,39 @@ export function files(root) {
     res.code = 200;
     res.headers.set("Content-Type", guess(path));
     res.body = data;
+  };
+}
+
+export function websocket(onSocket) {
+  return function* (req, res, next) {
+
+    // WebSocket connections must be GET requests
+    if (req.method !== "GET") return yield* next();
+
+    // Must have 'Upgrade: websocket' and 'Connection: Upgrade' headers
+    let headers = req.headers;
+    let connection = headers.get("Connection");
+    let upgrade = headers.get("Upgrade");
+    if (!(connection && /upgrade/i.test(connection) &&
+          upgrade && /websocket/i.test(upgrade))) return yield* next();
+
+    // Make sure it's a new client speaking v13 of the protocol
+    if (parseInt(headers.get("Sec-WebSocket-Version"), 10) < 13) {
+      throw new Error("only websocket protocol v13 supported");
+    }
+
+    // Make sure it has a websocket key
+    let key = headers.get("Sec-WebSocket-Key");
+    if (!key) {
+      throw new Error("websocket security key missing");
+    }
+
+    let accept = acceptKey(key);
+
+    res.code = 101;
+    res.headers.set("Upgrade", "websocket");
+    res.headers.set("Connection", "Upgrade");
+    res.headers.set("Sec-WebSocket-Accept", accept);
+    res.upgrade = onSocket;
   };
 }

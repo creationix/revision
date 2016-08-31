@@ -1,3 +1,4 @@
+/*global Buffer*/
 
 export function makeRead(socket, decode) {
 
@@ -81,7 +82,13 @@ export function makeWrite(socket, encode) {
 
   function write(value) {
     if (encode) value = encode(value);
-    if (value) socket.write(Buffer(value));
-    else socket.end();
+    return new Promise((resolve, reject) => {
+      if (value) socket.write(Buffer(value), check);
+      else socket.end(check);
+      function check(err) {
+        if (err) return reject(err);
+        return resolve();
+      }
+    });
   }
 }

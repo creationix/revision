@@ -1,12 +1,33 @@
 import { load, save, exists } from "./libs/cas-mem";
 import { scan } from "./libs/link";
-import { Server, autoHeaders, logger, files } from "./libs/weblit";
+import { Server, autoHeaders, logger, files, websocket } from "./libs/weblit";
 import { encode, decode } from "./libs/msgpack";
 
 new Server()
   .use(logger)      // To log requests to stdout
   .use(autoHeaders) // To ensure we send proper HTTP headers
-  .use(files("www"))  // To serve up the client-side app
+
+  // Also support sync protocol over websocket
+  .use(websocket(function* (req, read, write) {
+    let message;
+    while ((message = yield read())) {
+      // Download request
+      if (message.opcode === 1 && /^[0-9a-f]{40}$/.test(message.payload)) {
+        yield write(encode(yield* load(message.payload)));
+        continue;
+      }
+      // Upload request
+      if (message.opcode === 2) {
+        let obj = decode(message.payload);
+        for (let link of scan(obj)) {
+          if (!(yield* exists(link))) {
+            console.log("Sending", link.toHex());
+            yield write(link.toHex());
+          }
+        }
+      }
+    }
+  }))
 
   // Serve objects over GET requests
   .route({ method: "GET", path: "/:hash"}, function* (req, res, next) {
@@ -22,10 +43,10 @@ new Server()
   .route({ method: "POST", path: "/"}, function* (req, res) {
     let obj = decode(req.body);
     let link = yield* save(obj);
-    let response = [link.toBin()];
+    let response = [link];
     for (let link of scan(obj)) {
       if (!(yield* exists(link))) {
-        response.push(link.toBin())
+        response.push(link)
       }
     }
     res.code = 200;
@@ -33,5 +54,7 @@ new Server()
     res.headers.set("Location", `/${link.toHex()}`);
     res.body = encode(response);
   })
+
+  .use(files("www"))  // To serve up the client-side app
 
   .start();

@@ -3,6 +3,7 @@ import { importCommit } from "./libs/github";
 import { save, load, storage } from "./libs/cas-idb";
 import { guess } from "./libs/mime";
 import { domBuilder } from "./libs/dombuilder";
+import { upload } from "./libs/cas-sync";
 
 // Expose storage to browser for repl testing
 window.storage = storage;
@@ -154,6 +155,9 @@ run(function*() {
   }
   $.root = root;
 
-  render(yield* load(root));
+  let l = yield* upload("ws://localhost:8080/", root);
+  // console.log("Uploaded", l.toHex());
+
+  // render(yield* load(root));
 
 }());

@@ -260,3 +260,32 @@ export function indexOf(bin, raw, start, end) {
   }
   return -1;
 }
+
+export function uint8(num) {
+  return (num>>>0) & 0xff;
+}
+
+export function uint16(num) {
+  num = (num>>>0) & 0xffff;
+  return [
+    num >> 8,
+    num & 0xff
+  ];
+}
+export function uint32(num) {
+  num >>>= 0;
+  return [
+    num >> 24,
+    (num >> 16) & 0xff,
+    (num >> 8) & 0xff,
+    num & 0xff
+  ];
+}
+
+export function uint64(value) {
+  if (value < 0) value += 0x10000000000000000;
+  return [
+    uint32(value / 0x100000000),
+    uint32(value % 0x100000000)
+  ];
+}

@@ -1,4 +1,4 @@
-import { flatten, strToBin, binToStr } from "./bintools"
+import { flatten, strToBin, binToStr, uint8, uint16, uint32, uint64 } from "./bintools"
 
 let extensions = [];
 let extdex = {};
@@ -11,34 +11,6 @@ export function register(code, Constructor, encoder, decoder) {
     decoder: decoder
   });
 }
-function uint8(num) {
-  return (num>>>0) & 0xff;
-}
-
-function uint16(num) {
-  num = (num>>>0) & 0xffff;
-  return [
-    num >> 8,
-    num & 0xff
-  ];
-}
-function uint32(num) {
-  num >>>= 0;
-  return [
-    num >> 24,
-    (num >> 16) & 0xff,
-    (num >> 8) & 0xff,
-    num & 0xff
-  ];
-}
-function uint64(value) {
-  if (value < 0) value += 0x10000000000000000;
-  return [
-    uint32(value / 0x100000000),
-    uint32(value % 0x100000000)
-  ];
-}
-
 
 export function encode(value) {
   return flatten(realEncode(value));
