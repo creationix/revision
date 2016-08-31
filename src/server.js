@@ -6,7 +6,7 @@ import { encode, decode } from "./libs/msgpack";
 new Server()
   .use(logger)      // To log requests to stdout
   .use(autoHeaders) // To ensure we send proper HTTP headers
-  .use(files("."))  // To serve up the client-side app
+  .use(files("www"))  // To serve up the client-side app
 
   // Serve objects over GET requests
   .route({ method: "GET", path: "/:hash"}, function* (req, res, next) {
