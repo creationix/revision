@@ -78,9 +78,6 @@ export function decode(chunk) {
 
   return [{
     fin: (chunk[0] & 0x80) > 0,
-    rsv1: (chunk[0] & 0x40) > 0,
-    rsv2: (chunk[0] & 0x20) > 0,
-    rsv3: (chunk[0] & 0x10) > 0,
     opcode: opcode,
     mask: !!mask,
     len: len,
@@ -101,9 +98,7 @@ export function encode(item) {
   let payload = flatten(item.payload);
   let len = payload.length;
   let head = [
-    (item.rsv1 ? 0x40 : 0) |
-    (item.rsv2 ? 0x20 : 0) |
-    (item.rsv3 ? 0x10 : 0) |
+    ((item.hasOwnProperty("fin") ? item.fin : true) ? 0x80 : 0) |
     (item.hasOwnProperty("opcode") ? item.opcode & 0xf : 2),
     (item.mask ? 0x80 : 0) |
     (len < 126 ? len : len < 0x10000 ? 126 : 127)

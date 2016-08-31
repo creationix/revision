@@ -1,4 +1,4 @@
-import { load, save, exists } from "./libs/cas-mem";
+import { load, save, exists, storage } from "./libs/cas-mem";
 import { scan } from "./libs/link";
 import { Server, autoHeaders, logger, files, websocket } from "./libs/weblit";
 import { encode, decode } from "./libs/msgpack";
@@ -7,24 +7,25 @@ new Server()
   .use(logger)      // To log requests to stdout
   .use(autoHeaders) // To ensure we send proper HTTP headers
 
-  // Also support sync protocol over websocket
+  // Implement sync protocol over websockets
   .use(websocket(function* (req, read, write) {
     let message;
     while ((message = yield read())) {
       // Download request
       if (message.opcode === 1 && /^[0-9a-f]{40}$/.test(message.payload)) {
-        yield write(encode(yield* load(message.payload)));
+        let bin = yield storage.get(message.payload);
+        yield write(bin ? bin : "Missing: " + message.payload);
         continue;
       }
       // Upload request
       if (message.opcode === 2) {
         let obj = decode(message.payload);
+        let link = yield* save(obj);
         for (let link of scan(obj)) {
-          if (!(yield* exists(link))) {
-            console.log("Sending", link.toHex());
-            yield write(link.toHex());
-          }
+          if (yield* exists(link)) continue;
+          yield write(link.toHex());
         }
+        write("Got: " + link.toHex());
       }
     }
   }))
