@@ -22,6 +22,12 @@ export function* load(link) {
   return decode(yield storage.get(hex));
 }
 
+export function* exists(link) {
+  let hex = typeof link === "string" ?
+    link : link.toHex();
+  return yield storage.has(hex);
+}
+
 // Link has some nice methods in addition to storing the hash buffer.
 export class Link {
   constructor(hash) {
@@ -51,16 +57,28 @@ export class Link {
 }
 
 // Look for links in an object
-export function scan(value, onLink) {
-  if (value.constructor === Link) {
-    onLink(value);
-  }
-  else if (Array.isArray(value)) {
-    for (let item of value) scan(item, onLink);
-  }
-  else if (value.constructor === Object) {
-    for (let key in value) {
-      scan(value[key], onLink);
+export function scan() {
+  let links = [];
+  find(this);
+  return links;
+
+  function find(obj) {
+    if (!obj) return;
+    if (obj instanceof Link) {
+      links.push(obj);
+      return;
+    }
+    if (Array.isArray(obj)) {
+      for (let child of obj) {
+        find(child);
+      }
+      return;
+    }
+    if (obj.constructor === Object) {
+      for (let key in obj) {
+        find(obj[key]);
+      }
+      return;
     }
   }
 }

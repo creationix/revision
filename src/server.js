@@ -1,5 +1,7 @@
-import { load, save } from "./libs/cas-mem";
+import { load, save, exists } from "./libs/cas-mem";
+import { scan } from "./libs/link";
 import { Server, autoHeaders, logger, files } from "./libs/weblit";
+import { encode, decode } from "./libs/msgpack";
 
 new Server()
   .use(logger)      // To log requests to stdout
@@ -10,18 +12,26 @@ new Server()
   .route({ method: "GET", path: "/:hash"}, function* (req, res, next) {
     let hash = req.params.hash;
     if (!/^[0-9a-f]{40}$/.test(hash)) return yield* next();
+    let obj = yield* load(hash);
     res.code = 200;
-    res.headers.set("Content-Type", "application/octet-stream");
-    res.body = yield* load(hash);
+    res.headers.set("Content-Type", "application/x-msgpack");
+    res.body = encode(obj);
   })
 
   // Handle object uploads over POST
   .route({ method: "POST", path: "/"}, function* (req, res) {
-    let link = yield* save(req.body);
+    let obj = decode(req.body);
+    let link = yield* save(obj);
+    let response = [link.toBin()];
+    for (let link of scan(obj)) {
+      if (!(yield* exists(link))) {
+        response.push(link.toBin())
+      }
+    }
     res.code = 200;
-    res.headers.set("Content-Type", "application/octet-stream");
+    res.headers.set("Content-Type", "application/x-msgpack");
     res.headers.set("Location", `/${link.toHex()}`);
-    res.body = link.toBin();
+    res.body = encode(response);
   })
 
   .start();
