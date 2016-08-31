@@ -1,4 +1,7 @@
+/*global module*/
 import { createServer as createNetServer } from "net";
+import { request as nodeRequest } from "https";
+import { parse as urlParse } from "url";
 import { run } from "./async";
 import { makeRead, makeWrite } from "./gen-channel";
 import { decoder, encoder } from "./http-codec";
@@ -366,4 +369,25 @@ export function websocket(onSocket) {
     res.headers.set("Sec-WebSocket-Accept", accept);
     res.upgrade = onSocket;
   };
+}
+
+export function request(method, url, headers, body) {
+  return new Promise((resolve, reject) => {
+    let options = urlParse(url);
+    options.method = method;
+    options.headers = headers;
+    let req = nodeRequest(options, (res) => {
+      res.on('error', reject);
+      let parts = [];
+      res.on('data', (chunk) => {
+        parts.push(chunk);
+      });
+      res.on('end', () => {
+        resolve(flatten(parts));
+      });
+    });
+    req.on('error', reject);
+    if (body) req.write(body);
+    req.end();
+  });
 }

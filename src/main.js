@@ -158,6 +158,6 @@ run(function*() {
   let l = yield* upload("ws://localhost:8080/", root);
   // console.log("Uploaded", l.toHex());
 
-  // render(yield* load(root));
+  render(yield* load(root));
 
 }());

@@ -23,8 +23,8 @@ export function* upload(url, rootHash) {
     socket.send(yield storage.get(hash));
   }
   yield* process(rootHash);
-
 }
+
 //
 // export function* upload(url, rootHash) {
 //   let done = {};

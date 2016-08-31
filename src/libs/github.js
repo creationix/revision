@@ -1,6 +1,7 @@
-import { save, storage } from "./cas-idb";
+import { save } from "./cas-idb";
 import { runAll } from "./async";
 
+let GITHUB_ACCESS_TOKEN;
 function* get(path, format) {
   format = format || "json";
   let url = `https://api.github.com/${path}`;
@@ -9,13 +10,21 @@ function* get(path, format) {
       "application/vnd.github.v3.raw" :
       "application/vnd.github.v3+json"
   };
-  let username = (yield storage.get("GITHUB_USERNAME")) ||
-    prompt("Enter github username (for API auth)");
-  if (username) yield storage.set("GITHUB_USERNAME", username);
-  let token = (yield storage.get("GITHUB_TOKEN")) ||
-    prompt("Enter personal access token (for API auth)");
-  if (token) yield storage.set("GITHUB_TOKEN", token);
-  headers.Authorization = `Basic ${btoa(`${username}:${token}`)}`;
+
+  if (!GITHUB_ACCESS_TOKEN) {
+    let match = document.cookie.match(/github_access_token=([^&=]+)/);
+    if (match) GITHUB_ACCESS_TOKEN = match[1];
+    else {
+      let GITHUB_CLIENT_ID = yield (yield fetch("/github-client-id")).text();
+      let oauthState = Math.random().toString(36).substr(2);
+      console.log("GITHUB_CLIENT_ID", GITHUB_CLIENT_ID);
+      document.location =
+        `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&state=${oauthState}`;
+      return;
+    }
+  }
+
+  headers.Authorization = `token ${GITHUB_ACCESS_TOKEN}`;
   let res = yield fetch(url, {headers:headers});
   return res && (yield res[format]());
 }
