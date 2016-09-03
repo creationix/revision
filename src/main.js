@@ -21,31 +21,6 @@ route("", function () {
   return h('a', {href:"#github-import"}, "Import from github");
 });
 
-route("github-import", function () {
-  if (!localStorage.getItem("GITHUB_ACCESS_TOKEN")) {
-    save();
-    return go("github-auth");
-  }
-  return h('div.pre-u-1', [
-      h('form.pure-form', {onsubmit}, [
-      h('fieldset', [
-        h('legend', ['Import from GitHub']),
-        h('p', ['GitHub has not yet enabled CORS headers on their git HTTPS endpoints. Therefore it is impossible to do a normal git clone from the browser despite the work that has been done to implement the entire git protocol in pure JS.']),
-        h('p', ['We can, however import using the proprietary GitHub API, but this requires authentication to overcome the low rate limits that unauthenticated requests are subject to.']),
-        h('a.pure-button.pure-button-primary', {href: '/github-oauth'}, ['Use Oauth Flow']), ' or ',
-        h('button.pure-button', ["Use Personal Access Token"]), ' ',
-        h('input', {placeholder:'personal access token'}),
-        ' available ',
-        h('a', {href:'https://github.com/settings/tokens'}, ['here']), '.'
-      ])
-    ])
-  ]);
-  function onsubmit(evt) {
-    evt.preventDefault();
-
-  }
-});
-
 route("github-auth", function () {
   return page("Github Authentication", [
     h('div.pure-u-1-2', [
@@ -82,12 +57,43 @@ route("github-token/:token", function (params) {
   restore();
 });
 
-route("github-import/:user/:name/refs/:ref:", function (params) {
+route("github-import", function () {
   if (!localStorage.getItem("GITHUB_ACCESS_TOKEN")) {
     save();
     return go("github-auth");
   }
-  return function () {
-    return h('p', "TODO: do actual import with progress");
-  };
+  return page("GitHub Import", [
+    h('div.pure-u-1-2', [
+      h('form.pure-form.pure-form-stacked', {onsubmit}, [
+        h('fieldset', [
+          h('label', {for:"username"}, ["Username"]),
+          h('input', {name:"username",placeholder:'creationix'}),
+          h('label', {for:"project"}, ["Project"]),
+          h('input', {name:"project",placeholder:'exploder'}),
+          h('label', {for:"ref"}, ["Git Ref"]),
+          h('input', {name:"ref",placeholder:'heads/master'}),
+          h('button.pure-button.pure-button-primary', {type:"submit"}, ["Import"])
+        ])
+      ])
+    ]),
+    h('div.pre-u-1-2', [
+    ])
+  ]);
+  function onsubmit(evt) {
+    evt.preventDefault();
+    let username = evt.target.username.value;
+    let project = evt.target.project.value;
+    let ref = evt.target.ref.value || "heads/master";
+    if (!(username && project && ref)) return;
+    return go(`github-import/${username}/${project}/refs/${ref}`);
+  }
+});
+
+route("github-import/:user/:name/refs/:ref:", function (params) {
+  let token = localStorage.getItem("GITHUB_ACCESS_TOKEN")
+  if (!token) {
+    save();
+    return go("github-auth");
+  }
+  return h('p', "TODO: do actual import with progress");
 });
