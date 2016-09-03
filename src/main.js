@@ -1,7 +1,6 @@
 
 import { newProgressBar } from "./components/progress-bar";
-import { css } from "css";
-import { projector } from "projector";
+import { projector, css } from "maquette";
 
 let progress = newProgressBar("Something is going on");
 
@@ -13,10 +12,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
   let total = 0;
   let done = 0;
-  let it = setInterval(100, function () {
-    if (Math.random() < 0.2) total += Math.floor(Math.random() * 10) + 2;
-    if (Math.random() < 0.6 && done < total) done++;
+  let it = setInterval(function () {
+    if (Math.random() < 0.3 && total < 100) total += Math.floor(Math.random() * 5) + 1;
+    if (Math.random() < 0.9 && done < total) done++;
     if (done === total && total > 20) clearInterval(it);
     progress.update(done, total);
-  })
+  }, 50);
 });

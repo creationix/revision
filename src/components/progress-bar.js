@@ -1,5 +1,4 @@
-import { h } from "maquette"
-import { css } from "css";
+import { h, projector, css } from "maquette"
 
 css.push(`
 progress-bar {
@@ -26,7 +25,7 @@ export function newProgressBar(message) {
   function update(newDone, newTotal) {
     done = newDone;
     total = newTotal;
-    window.projector.scheduleRender();
+    projector.scheduleRender();
   }
   function render() {
     let percent = (done && total) ?
