@@ -1,20 +1,19 @@
-import { h, projector } from "maquette"
-import { inject } from "../libs/css"
+import { h, style, projector } from "../libs/maquette"
 
-inject(`
+style(`
 progress-bar {
-  margin: auto;
-  background-color: #998;
-  box-shadow: inset 0 0 30px #665;
-  min-width: 50%;
+  display: block;
+  background-color: #665;
+  box-shadow: inset 0 0 30px #998;
   text-align: center;
   font-size: 12px;
+  height: 3em;
 }
 progress-bar .progress {
-  transition: width 1s;
-  background-color: #2af;
+  transition: width 0.5s;
+  background-color: #069;
   height: 3em;
-  box-shadow: inset 0 0 30px #12f;
+  box-shadow: inset 0 0 30px #58f;
 
 }
 progress-bar .message {
@@ -23,8 +22,8 @@ progress-bar .message {
   margin-top: -3em;
   white-space: nowrap;
   padding: 0 10px;
-  color: #000;
-  text-shadow: 0 0 1px #fff;
+  color: #eee;
+  text-shadow: 0 0 1px #000;
   font-weight: bold;
   font-family: ubuntu, sans-serif;
 }

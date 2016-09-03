@@ -1,13 +1,15 @@
-import { h } from "maquette"
-import { inject } from "../libs/css"
+import { h, style } from "../libs/maquette"
 
-inject(`
+style(`
 screen-shade {
   position: absolute;
   width: 100%; height: 100%;
   left: 0; top: 0; right: 0; bottom: 0;
   display: flex;
   background-color: rgba(0,0,0,0.5);
+}
+screen-shade .wrapper {
+  margin: auto;
 }
 `);
 
@@ -17,7 +19,9 @@ export function ScreenShade(content) {
 
   function render() {
     return h("screen-shade", [
-      content.render()
+      h("div.wrapper", [
+        content.render()
+      ])
     ]);
   }
 }

@@ -1,7 +1,11 @@
-let styles = [];
+let maquette = window.maquette;
+export let h = maquette.h
+export let projector = maquette.createProjector();
 
+let styles = [];
 let dirty = false;
-export function inject(css) {
+
+export function style(css) {
   if (!dirty) requestAnimationFrame(update);
   dirty = true;
   styles.push(css);
