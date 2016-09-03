@@ -40,12 +40,19 @@ new Server()
     }
   }))
 
-  // Send github client id to browser so it knows which app to auth against.
-  .route({ method: "GET", path: "/github-client-id"}, function* (req, res) {
-    res.code = 200;
-    res.body = GITHUB_CLIENT_ID;
+  // When the browser wants to authenticate with github, it only needs to
+  // open this page in a new window.
+  .route({ method: "GET", path: "/github-oauth"}, function* (req, res) {
+    let oauthState = Math.random().toString(36).substr(2);
+    res.code = 302;
+    res.headers.set("Location", 'https://github.com/login/oauth/authorize' +
+      `?client_id=${GITHUB_CLIENT_ID}&state=${oauthState}`);
+    res.body = "Redirecting to start github oauth flow...\n";
   })
 
+  // After the user authencates with github and authorizes us, they will be
+  // redirected back to this url.  We need to fetch the token and give it to
+  // the browser.
   .route({ method: "GET", path: "/github-callback"}, function* (req, res) {
     let url = "https://github.com/login/oauth/access_token";
     let body = yield request("POST", url, {
@@ -63,11 +70,9 @@ new Server()
       res.body = `Error: ${result.error}\nDescription: ${result.error_description}\nUri: ${result.error_uri}\n`;
       return;
     }
-    console.log(result);
     res.code = 302;
-    res.headers.set("Set-Cookie", `github_access_token=${result.access_token}`);
-    res.headers.set("Location", "/");
-    res.body = "Authorized!\n";
+    res.headers.set("Location", `/#github-token/${result.access_token}`);
+    res.body = "Authorized, redirecting back to main site!\n";
   })
 
   // Serve objects over GET requests

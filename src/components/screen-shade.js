@@ -10,6 +10,7 @@ screen-shade {
 }
 screen-shade .wrapper {
   margin: auto;
+  box-shadow: 0 0 40px rgba(0,0,0,0.5);
 }
 `);
 
