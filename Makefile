@@ -1,10 +1,13 @@
 FILES = $(wildcard src/**/*.js) $(wildcard src/*.js)
 
-all: server.js www/main.js www/worker.js
+build: server.js www/main.js www/worker.js
 
-serve: all
-	node server.js
-
+serve:
+	rollup -c rollup.worker.config.js -w &
+	rollup -c rollup.main.config.js -w &
+	rollup -c rollup.server.config.js
+	node server.js; killall node
+	
 server.js: $(FILES)
 	echo "Recompiling server"
 	rollup -c rollup.server.config.js

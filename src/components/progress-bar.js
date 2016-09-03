@@ -1,22 +1,36 @@
-import { h, projector, css } from "maquette"
+import { h, projector } from "maquette"
+import { inject } from "../libs/css"
 
-css.push(`
+inject(`
 progress-bar {
-  position: absolute;
-  display: block;
-  width: 100%; height: 100%;
-  left: 0; top: 0; right: 0; bottom: 0;
-  background-color: rgba(0,0,0,0.3);
+  margin: auto;
+  background-color: #998;
+  box-shadow: inset 0 0 30px #665;
+  min-width: 50%;
+  text-align: center;
+  font-size: 12px;
 }
-progress-bar .outer {
-  width: 50%;
-  margin-left: auto;
-  margin-right: auto;
-  background-color: #fff;
+progress-bar .progress {
+  transition: width 1s;
+  background-color: #2af;
+  height: 3em;
+  box-shadow: inset 0 0 30px #12f;
+
+}
+progress-bar .message {
+  height: 3em;
+  line-height: 3em;
+  margin-top: -3em;
+  white-space: nowrap;
+  padding: 0 10px;
+  color: #000;
+  text-shadow: 0 0 1px #fff;
+  font-weight: bold;
+  font-family: ubuntu, sans-serif;
 }
 `);
 
-export function newProgressBar(message) {
+export function ProgressBar(message) {
   let total = 0,
       done = 0;
 
@@ -31,11 +45,9 @@ export function newProgressBar(message) {
     let percent = (done && total) ?
       (done * 100 / total) : 0;
     return h("progress-bar", [
-      h('div.outer', [
-        h('div.fill', {styles:{width:`${percent}%`}}),
-        h('div.overlay', [
-          `${message} (${done}/${total})`
-        ])
+      h('div.progress', {styles:{width:`${percent}%`}}),
+      h('div.message', [
+        `${message} (${done}/${total})`
       ])
     ]);
   }
