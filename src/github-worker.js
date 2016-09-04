@@ -116,7 +116,7 @@ function* readExec(owner, repo, sha) {
 
 function* readSym(owner, repo, sha) {
   let bin = yield* gitLoad(owner, repo, sha, "blob");
-  return binToStr(bin);
+  return [3, binToStr(bin)];
 }
 
 function* readSubmodule(owner, repo, sha, path, gitmodules) {

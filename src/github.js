@@ -6,8 +6,9 @@ import { page } from "./components/page"
 import { ProgressBar } from "./components/progress-bar"
 
 route("github-auth", function githubAuth() {
+  document.title = 'Github Authentication - Revision Studio';
   return page("Github Authentication", [
-    h('div.pure-u-1-2', [
+    h('div.pure-u-1.pure-u-md-1-2', [
       h('p', [
         h('a.pure-button.pure-button-primary', {href: '/github-oauth'}, ['Use Oauth Flow'])
       ]),
@@ -24,7 +25,7 @@ route("github-auth", function githubAuth() {
         ])
       ])
     ]),
-    h('div.pure-u-1-2', [
+    h('div.pure-u-1.pure-u-md-1-2', [
       h('p', ['GitHub has not yet enabled CORS headers on their git HTTPS endpoints. Therefore it is impossible to do a normal git clone from the browser despite the work that has been done to implement the entire git protocol in pure JS.']),
       h('p', ['We can, however import using the proprietary GitHub API, but this requires authentication to overcome the low rate limits that unauthenticated requests are subject to.'])
     ])
@@ -37,6 +38,7 @@ route("github-auth", function githubAuth() {
 });
 
 route("github-token/:token", function githubStoreToken(params) {
+  document.title = 'Storing GitHub Token - Revision Studio';
   localStorage.setItem("GITHUB_ACCESS_TOKEN", params.token);
   restore();
 });
@@ -45,8 +47,9 @@ route("github-import", function githubImportForm() {
   if (!localStorage.getItem("GITHUB_ACCESS_TOKEN")) {
     return go("github-auth", true);
   }
+  document.title = 'GitHub Import Form - Revision Studio';
   return page("GitHub Import", [
-    h('div.pure-u-1-3', [
+    h('div.pure-u-1.pure-u-md-1-3', [
       h('form.pure-form.pure-form-stacked', {onsubmit}, [
         h('fieldset', [
           h('label', {for:"username"}, ["Username"]),
@@ -59,7 +62,7 @@ route("github-import", function githubImportForm() {
         ])
       ])
     ]),
-    h('div.pure-u-2-3', [
+    h('div.pure-u-2-3.pure-u-md-2-3', [
       h('p', ['This tool will import the latest commit from a repo into your local content-addressable storage graph for use in the revision system.']),
       h('p', ['The Git Ref is optional and defaults to the master branch.'])
     ])
@@ -75,6 +78,7 @@ route("github-import", function githubImportForm() {
 });
 
 route("github-import/:owner/:repo/refs/:ref:", function githubImport(params) {
+  document.title = `Importing ${params.repo}/${params.repo} - Revision Studio`;
   let token = localStorage.getItem("GITHUB_ACCESS_TOKEN");
   if (!token) return go("github-auth", true);
   let value = 0,
@@ -95,8 +99,14 @@ route("github-import/:owner/:repo/refs/:ref:", function githubImport(params) {
   return progress.render;
 
   function onDone(entry) {
-    console.log(entry);
-    go(`tree/${binToHex(entry[1].hash)}`);
+    let name = `${owner}-${repo}`;
+    let hex = binToHex(entry[1].hash);
+    let x, i = 0, base = name;
+    while ((x = localStorage.getItem(name)) && hex !== x) {
+      name = `${base}-${++i}`;
+    }
+    localStorage.setItem(name, hex);
+    go(`edit/${name}`);
   }
 
 });

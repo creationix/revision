@@ -10,7 +10,6 @@ style(`
 `);
 
 export function page(title, body) {
-  document.title = `${title} - Revision Studio`;
   return h('div.content-wrapper', [
     h('h1', [].concat(title)),
     h('div.pure-g', {key:title}, [].concat(body))

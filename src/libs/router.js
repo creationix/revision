@@ -41,13 +41,13 @@ function router() {
 
 export function go(path, preserve) {
   if (preserve) {
-    localStorage.setItem("route-bookmark", location.hash);
+    localStorage.setItem("ROUTE_BOOKMARK", location.hash);
   }
   location.hash = path;
 }
 
 export function restore() {
-  let path = localStorage.getItem("route-bookmark") || '';
-  localStorage.removeItem("route-bookmark", location.hash);
+  let path = localStorage.getItem("ROUTE_BOOKMARK") || '';
+  localStorage.removeItem("ROUTE_BOOKMARK", location.hash);
   location.hash = path;
 }
