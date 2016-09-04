@@ -39,16 +39,15 @@ function router() {
   location.hash = last;
 }
 
-export function go(path) {
+export function go(path, preserve) {
+  if (preserve) {
+    localStorage.setItem("route-bookmark", location.hash);
+  }
   location.hash = path;
 }
 
-export function save() {
-  localStorage.setItem("hash", location.hash);
-}
-
 export function restore() {
-  let path = localStorage.getItem("hash") || '';
-  localStorage.removeItem("hash", location.hash);
+  let path = localStorage.getItem("route-bookmark") || '';
+  localStorage.removeItem("route-bookmark", location.hash);
   location.hash = path;
 }

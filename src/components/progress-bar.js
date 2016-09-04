@@ -1,4 +1,6 @@
-import { h, style, projector } from "../libs/maquette"
+import { h } from "../libs/maquette"
+import { style } from "../libs/style-inject"
+import { projector } from "../libs/router"
 
 style(`
 progress-bar {

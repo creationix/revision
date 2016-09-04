@@ -26,7 +26,7 @@ export function compileRoute(route) {
   let reg = new RegExp("^" + route.split(/(:[a-z0-9_]+:?)/).map(function (part, i) {
     if (i % 2) {
       if (part[part.length - 1] === ':') {
-        names.push(part.substr(1, -2));
+        names.push(part.substr(1, part.length - 2));
         return "(.+)";
       }
       names.push(part.substr(1));
