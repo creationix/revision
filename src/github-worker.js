@@ -5,7 +5,6 @@ import { binToStr } from "./libs/bintools"
 let GITHUB_ACCESS_TOKEN;
 self.onmessage = function(evt) {
   GITHUB_ACCESS_TOKEN = evt.data.token;
-  console.log("TOKEN", GITHUB_ACCESS_TOKEN)
   run(readCommit(evt.data.owner, evt.data.repo, evt.data.ref))
     .then(self.postMessage)
     .catch(self.postMessage);
