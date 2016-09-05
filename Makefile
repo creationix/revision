@@ -1,5 +1,7 @@
 FILES = $(wildcard src/**/*.js) $(wildcard src/*.js)
 
+watch:
+	ls rollup.*.config.js | xargs -n1 -P10 rollup -w -c
 build: server.js www/main.js www/worker.js
 
 serve:
