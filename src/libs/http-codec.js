@@ -294,10 +294,5 @@ function decoder() {
   function decode(chunk) {
     return mode(chunk);
   }
-  decode.concat = concat;
   return decode;
-}
-
-function concat(buffer, chunk) {
-  return (buffer && buffer.length) ? flatten([buffer, chunk]) : chunk;
 }

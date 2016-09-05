@@ -1,12 +1,15 @@
-import { flatten, strToRaw, binToStr, binToRaw, rawToBin, indexOf } from "./bintools"
+import {
+  flatten, strToBin, binToStr, binToRaw, rawToBin, indexOf
+} from "./bintools"
 
 // Values come in, Uint8Array comes out
 export function encode(value) {
+  if (value === undefined) return;
   return flatten(realEncode(value));
 }
 
 function realEncode(value) {
-  if (value == null) {
+  if (value === null) {
     return '*-1\r\n';
   }
   else if (typeof value === 'number') {
@@ -15,26 +18,21 @@ function realEncode(value) {
   else if (value instanceof Error) {
     return '-' + value.message + '\r\n';
   }
-  else if (value instanceof Uint8Array) {
-    return ['$' + value.length + '\r\n', value, '\r\n'];
-  }
   else if (Array.isArray(value)) {
     return ['*' + value.length + '\r\n', value.map(realEncode)];
   }
   else {
-    value = strToRaw('' + value);
-    if (/\r\n/.test(value)) {
-      return '$' + value.length + '\r\n' + value + '\r\n';
+    if (!(value instanceof Uint8Array)) {
+      value = strToBin('' + value);
     }
-    else {
-      return '+' + value + '\r\n';
-    }
+    return ['$' + value.length + '\r\n', value, '\r\n'];
   }
 }
 
 // Uint8Array comes in, [value, extra] comes out.
 // Extra is undefined if there was no extra input.
 export function decode(chunk) {
+  if (!chunk) return;
   let out = innerDecode(chunk, 0);
   if (!out) return;
   return (out[1] < chunk.length) ?

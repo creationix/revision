@@ -1,4 +1,5 @@
 /*global Buffer*/
+import { flatten } from "./bintools";
 
 export function makeRead(socket, decode) {
 
@@ -13,7 +14,11 @@ export function makeRead(socket, decode) {
   // buffer to store leftover data between decoder calls.
   let buffer;
 
-  read.updateDecode = (newDecode) => { decode = newDecode };
+  let concat = decode.concat || defaultConcat;
+  read.updateDecode = (newDecode) => {
+    decode = newDecode;
+    concat = decode.concat || defaultConcat;
+  };
 
   return read;
 
@@ -44,7 +49,7 @@ export function makeRead(socket, decode) {
     // Convert node buffer to portable Uint8Array
     if (chunk) chunk = new Uint8Array(chunk);
     if (!decode) { onValue(chunk); return; }
-    buffer = decode.concat(buffer, chunk);
+    buffer = concat(buffer, chunk);
     let out;
     while ((out = decode(buffer))) {
       // console.log("OUT", out);
@@ -91,4 +96,8 @@ export function makeWrite(socket, encode) {
       }
     });
   }
+}
+
+function defaultConcat(buffer, chunk) {
+  return (buffer && buffer.length) ? flatten([buffer, chunk]) : chunk;
 }

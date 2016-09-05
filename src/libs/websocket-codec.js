@@ -29,10 +29,6 @@ function applyMask(data, mask) {
   return masked;
 }
 
-decode.concat = function (buffer, chunk) {
-  return (buffer && buffer.length) ? flatten([buffer, chunk]) : chunk;
-};
-
 export function decode(chunk) {
   if (!chunk) return;
   if (chunk.length < 2) return;
