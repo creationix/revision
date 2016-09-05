@@ -1,26 +1,6 @@
-FILES = $(wildcard src/**/*.js) $(wildcard src/*.js)
-
 watch:
-	ls rollup.*.config.js | xargs -n1 -P10 rollup -w -c
-build: server.js www/main.js www/worker.js
+	ls rollup.*.config.js | grep -v server | xargs -n1 -P10 rollup -w -c
 
 serve:
-	rollup -c rollup.worker.config.js -w &
-	rollup -c rollup.main.config.js -w &
 	rollup -c rollup.server.config.js
-	node server.js; killall node
-	
-server.js: $(FILES)
-	echo "Recompiling server"
-	rollup -c rollup.server.config.js
-
-www/main.js: $(FILES)
-	echo "Recompiling main"
-	rollup -c rollup.main.config.js
-
-www/worker.js: $(FILES)
-	echo "Recompiling worker"
-	rollup -c rollup.worker.config.js
-
-clean:
-	rm -f server.js www/main.js* www/worker.js*
+	node server.js

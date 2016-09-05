@@ -11,6 +11,9 @@ import "./libs/cas-idb"
 // Include github import ability.
 import "./github"
 
+// Include server-sync ability
+import "./sync"
+
 route("", function () {
   document.title = `Revision Studio`;
 

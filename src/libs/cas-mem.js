@@ -1,5 +1,4 @@
-import { Link, load, save, exists, storage } from "./link";
-export { Link, load, save, exists, storage }
+import { storage } from "./link";
 
 let db = {};
 

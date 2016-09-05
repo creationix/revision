@@ -1,6 +1,7 @@
-import { save } from "./libs/cas-idb"
 import { run, runAll } from "./libs/async"
 import { binToStr } from "./libs/bintools"
+import { save } from "./libs/link"
+import "./libs/cas-idb"
 
 let GITHUB_ACCESS_TOKEN;
 self.onmessage = function(evt) {

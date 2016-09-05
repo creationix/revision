@@ -1,9 +1,11 @@
 /*global process*/
-import { load, save, exists, storage } from "./libs/cas-mem";
-import { scan } from "./libs/link";
+import { addInspect } from "./libs/bintools"; addInspect();
+import { scan, load, save, exists, storage } from "./libs/link";
 import { Server, autoHeaders, logger, files, websocket, request } from "./libs/weblit";
 import { encode, decode } from "./libs/msgpack";
 import { binToStr } from "./libs/bintools";
+
+import "./libs/cas-redis";
 
 // These default to the settings for the Localhost version, production
 // deployments will need to provide their own ID and SECRET via the environment.
@@ -12,30 +14,78 @@ let GITHUB_CLIENT_ID =
 let GITHUB_CLIENT_SECRET =
   process.env.GITHUB_CLIENT_SECRET || "b663a529316de2b0f3218e362bfabab3aaa7890e";
 
-
 new Server()
   .use(logger)      // To log requests to stdout
   .use(autoHeaders) // To ensure we send proper HTTP headers
 
-  // Implement sync protocol over websockets
+
   .use(websocket(function* (req, read, write) {
     let message;
+    let upload;
+    let wants;
+
+    function checkUpload(hash) {
+      if (!upload) return;
+      delete wants[hash];
+      for (let key in wants) { return key; }
+      hash = upload;
+      upload = undefined;
+      wants = undefined;
+      write("d:" + hash);
+    }
+
     while ((message = yield read())) {
-      // Download request
-      if (message.opcode === 1 && /^[0-9a-f]{40}$/.test(message.payload)) {
-        let bin = yield storage.get(message.payload);
-        yield write(bin ? bin : "Missing: " + message.payload);
-        continue;
-      }
       // Upload request
       if (message.opcode === 2) {
         let obj = decode(message.payload);
-        let link = yield* save(obj);
-        for (let link of scan(obj)) {
-          if (yield* exists(link)) continue;
-          yield write(link.toHex());
+        let hash = (yield* save(obj)).toHex();
+        let queue = [obj];
+        while (queue.length) {
+          obj = queue.pop();
+          for (let link of scan(obj)) {
+            if (yield* exists(link)) {
+              queue.push(yield link.resolve());
+            }
+            else {
+              if (wants) wants[link.toHex()] = true;
+              yield write("w:" + link.toHex());
+            }
+          }
         }
-        write("Got: " + link.toHex());
+        checkUpload(hash);
+      }
+      // Command messages
+      // s = start upload, w = want, d = done, m = missing, e = error
+      if (message.opcode === 1) {
+        let match = message.payload.match(/^(.):([0-9a-f]{40})$/);
+        if (!match) continue;
+        let command = match[1],
+            hash = match[2];
+        if (command === 's') {
+          if (yield storage.has(hash)) {
+            // TODO: scan for deep links that are missing
+            // We alredy have this hash.
+            yield write("d:" + hash);
+          }
+          else if (upload) {
+            // There is an upload already in progress on this socket.
+            yield write("e:" + hash);
+          }
+          else {
+            // Start a new upload
+            upload = hash;
+            wants = {};
+            wants[hash] = true;
+            yield write("w:" + match[2]);
+          }
+        }
+        else if (command === 'w') {
+          let bin = yield storage.get(hash);
+          yield write(bin ? bin : ('m:' + hash));
+        }
+        else if (command === 'm') {
+          checkUpload(hash);
+        }
       }
     }
   }))
