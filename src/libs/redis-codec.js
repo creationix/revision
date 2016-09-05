@@ -1,37 +1,39 @@
-import { flatten, strToRaw, binToStr, strToBin, binToRaw, rawToBin, indexOf } from "./bintools"
+import { flatten, strToRaw, binToStr, binToRaw, rawToBin, indexOf } from "./bintools"
 
-export function encode(list) {
-  let len = list.length;
-  let parts = ['*' + len];
-  for (let i = 0; i < len; i++) {
-    let part = list[i];
-    if (part == null) {
-      parts.push('\r\n*-1');
-    }
-    else if (typeof part === 'number') {
-      parts.push('\r\n:' + part);
-    }
-    else if (part instanceof Error) {
-      parts.push('\r\n-' + part.message);
-      continue
-    }
-    else if (part instanceof Uint8Array) {
-      parts.push('\r\n$' + part.length + '\r\n', part);
-    }
-    else {
-      part = strToRaw('' + part);
-      if (/\r\n/.test(part)) {
-        parts.push('\r\n$' + part.length + '\r\n' + part);
-      }
-      else {
-        parts.push('\r\n+' + part);
-      }
-    }
-  }
-  parts.push('\r\n');
-  return flatten(parts);
+// Values come in, Uint8Array comes out
+export function encode(value) {
+  return flatten(realEncode(value));
 }
 
+function realEncode(value) {
+  if (value == null) {
+    return '*-1\r\n';
+  }
+  else if (typeof value === 'number') {
+    return ':' + value + '\r\n';
+  }
+  else if (value instanceof Error) {
+    return '-' + value.message + '\r\n';
+  }
+  else if (value instanceof Uint8Array) {
+    return ['$' + value.length + '\r\n', value, '\r\n'];
+  }
+  else if (Array.isArray(value)) {
+    return ['*' + value.length + '\r\n', value.map(realEncode)];
+  }
+  else {
+    value = strToRaw('' + value);
+    if (/\r\n/.test(value)) {
+      return '$' + value.length + '\r\n' + value + '\r\n';
+    }
+    else {
+      return '+' + value + '\r\n';
+    }
+  }
+}
+
+// Uint8Array comes in, [value, extra] comes out.
+// Extra is undefined if there was no extra input.
 export function decode(chunk) {
   let out = innerDecode(chunk, 0);
   if (!out) return;
@@ -71,6 +73,10 @@ function innerDecode(chunk, offset) {
       let index = indexOf(chunk, '\r\n', offset);
       if (index < 0) return;
       let len = parseInt(binToRaw(chunk, offset + 1, index), 10);
+      if (len < 0) return [
+        null,
+        index + 2
+      ];
       let start = index + 2,
           end = start + len;
       if (chunk.length < end + 2) return;
@@ -116,9 +122,53 @@ import { assert } from "./assert"
 
 export function test() {
 
-  function testDecode(input, expected) {
-    input = rawToBin(input);
+  let decodeTests = [
+    "*2\r\n*1\r\n+Hello\r\n+World\r\n", [
+      [["Hello"],"World"]
+    ],
+    "*2\r\n*1\r\n$5\r\nHello\r\n$5\r\nWorld\r\n", [
+      [["Hello"],"World"]
+    ],
+    "set language Lua\r\n", [
+      ["set", "language", "Lua"]
+    ],
+    "$5\r\n12345\r\n", [
+      "12345"
+    ],
+    "$5\r\n12345\r", undefined,
+    "$5\r\n12345\r\nabc", [
+      "12345",
+      "abc"
+    ],
+    "+12", undefined,
+    "+1234\r", undefined,
+    "+1235\r\n", [
+      "1235"
+    ],
+    "+1235\r\n1234", [
+      "1235",
+      "1234"
+    ],
+    ":45\r", undefined,
+    ":45\r\n", [
+      45
+    ],
+    "*-1\r\nx", [
+      null,
+      "x"
+    ],
+    "-FATAL, YIKES\r\n", [
+      new Error("FATAL, YIKES")
+    ],
+    "*12\r\n$4\r\n2048\r\n$1\r\n0\r\n$4\r\n1024\r\n$2\r\n42\r\n$1\r\n5\r\n$1\r\n7\r\n$1\r\n5\r\n$1\r\n7\r\n$1\r\n5\r\n$1\r\n7\r\n$1\r\n5\r\n$1\r\n7\r\n", [
+      ['2048', '0', '1024', '42', '5', '7', '5', '7', '5', '7', '5', '7' ]
+    ]
+  ];
+
+  for (let i = 0, l = decodeTests.length; i < l; i += 2) {
+    let input = rawToBin(decodeTests[i]);
     console.log("Input   :", input);
+    let expected = decodeTests[i + 1];
     if (expected && expected[1]) expected[1] = rawToBin(expected[1]);
     console.log("Expected:", expected);
     let actual = decode(input);
@@ -126,48 +176,23 @@ export function test() {
     assert(JSON.stringify(expected) == JSON.stringify(actual));
   }
 
-  testDecode("*2\r\n*1\r\n+Hello\r\n+World\r\n", [
-    [["Hello"],"World"]
-  ])
-  testDecode("*2\r\n*1\r\n$5\r\nHello\r\n$5\r\nWorld\r\n", [
-    [["Hello"],"World"]
-  ])
-  testDecode("set language Lua\r\n", [
-    ["set", "language", "Lua"]
-  ])
-  testDecode("$5\r\n12345\r\n", [
-    "12345"
-  ])
-  testDecode("$5\r\n12345\r")
-  testDecode("$5\r\n12345\r\nabc", [
-    "12345",
-    "abc"
-  ])
-  testDecode("+12")
-  testDecode("+1234\r")
-  testDecode("+1235\r\n", [
-    "1235"
-  ])
-  testDecode("+1235\r\n1234", [
-    "1235",
-    "1234"
-  ])
-  testDecode(":45\r")
-  testDecode(":45\r\n", [
-    45
-  ])
-  testDecode("*-1\r\nx", [
+  let values = [
+    "Hello",
     null,
-    "x"
-  ])
-  testDecode("-FATAL, YIKES\r\n", [
-    new Error("FATAL, YIKES")
-  ])
-  testDecode("*12\r\n$4\r\n2048\r\n$1\r\n0\r\n$4\r\n1024\r\n$2\r\n42\r\n$1\r\n5\r\n$1\r\n7\r\n$1\r\n5\r\n$1\r\n7\r\n$1\r\n5\r\n$1\r\n7\r\n$1\r\n5\r\n$1\r\n7\r\n", [
-    ['2048', '0', '1024', '42', '5', '7', '5', '7', '5', '7', '5', '7' ]
-  ])
+    10, -10,
+    "With\r\nNewline",
+    [1,2,3,4]
+  ];
 
-  console.log(binToRaw(encode([1,2,null,"HI",4])))
-  console.log(decode(encode([1,2,null,"HI",4]))[0])
+  console.log("\nEncode tests:");
+  for (let value of values) {
+    console.log('\nInput:  ', value);
+    let encoded = encode(value);
+    console.log('Encoded:', [binToRaw(encoded)]);
+    let decoded = decode(encoded);
+    console.log('Decoded:', decoded);
+  }
+
 }
+// import { addInspect } from "./bintools"; addInspect();
 // test()
