@@ -1,19 +1,22 @@
+
+export function addInspect() {
+  // Make working with Uint8Array less painful in node.js
+  Uint8Array.prototype.inspect = function () {
+    let str = '';
+    for (let i = 0; i < this.length; i++) {
+      if (i >= 50) { str += '...'; break; }
+      str += (this[i] < 0x10 ? ' 0' : ' ') + this[i].toString(16);
+    }
+    return '<Uint8Array' + str + '>';
+  }
+}
+
 // TYPES:
 //   bin - a Uint8Array containing binary data.
 //   str - a normal unicode string.
 //   raw - a string where each character's charCode is a byte value. (utf-8)
 //   hex - a string holding binary data as lowercase hexadecimal.
 //   b64 - a string holding binary data in base64 encoding.
-
-// Make working with Uint8Array less painful in node.js
-Uint8Array.prototype.inspect = function () {
-  let str = '';
-  for (let i = 0; i < this.length; i++) {
-    if (i >= 50) { str += '...'; break; }
-    str += (this[i] < 0x10 ? ' 0' : ' ') + this[i].toString(16);
-  }
-  return '<Uint8Array' + str + '>';
-}
 
 // Convert a raw string into a Uint8Array
 export function rawToBin(raw, start, end) {
@@ -72,12 +75,18 @@ export function rawToStr(raw) {
   return decodeURIComponent(escape(raw));
 }
 
-const codes =
-  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-// Reverse map from character code to 6-bit integer
-let map = [];
-for (let i = 0, l = codes.length; i < l; i++) {
-  map[codes.charCodeAt(i)] = i;
+function getCodes() {
+  return 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+}
+let map;
+function getMap() {
+   if (map) return map;
+   map = [];
+   let codes = getCodes();
+   for (let i = 0, l = codes.length; i < l; i++) {
+     map[codes.charCodeAt(i)] = i;
+   }
+   return map;
 }
 
 // Loop over input 3 bytes at a time
@@ -88,6 +97,7 @@ for (let i = 0, l = codes.length; i < l; i++) {
 // if there is also no b then pad the 3rd with =
 export function binToB64(bin) {
   let b64 = "";
+  let codes = getCodes();
   for (let i = 0, l = bin.length; i < l; i += 3) {
     let a = bin[i],
         b = i + 1 < l ? bin[i + 1] : -1,
@@ -112,6 +122,7 @@ export function binToB64(bin) {
 // if d is padding then there is no 3rd byte
 // if c is padding then there is no 2nd byte
 export function b64ToBin(b64) {
+  let map = getMap();
   let bytes = [];
   let j = 0;
   for (let i = 0, l = b64.length; i < l; i += 4) {
