@@ -377,3 +377,82 @@ export function framePlain(type, body) {
     body
   ]);
 }
+
+import { sha1 } from "./sha1"
+import { assert } from "./assert"
+import { addInspect } from "./bintools";
+
+export function test() {
+  addInspect();
+  let bin = frameCommit({
+    tree: "0d1e7b7d91995b7ec7f2861e22c45b5f75484a16",
+    parents: ["87bf1e51199b64bf814002b3389b8aa1810c2044"],
+    author: {
+      name: "Tim Caswell",
+      email: "tim@creationix.com",
+      date: {
+        seconds: 1473188682,
+        offset: 5*60
+      }
+    },
+    committer: {
+      name: "Tim Caswell",
+      email: "tim@creationix.com",
+      date: {
+        seconds: 1473188682,
+        offset: 5*60
+      }
+    },
+    message: "Make mime guessing smarter\n"
+  });
+  console.log(bin)
+  let hash = sha1(bin);
+  console.log(hash);
+  let obj = deframeCommit(bin);
+  console.log(obj);
+  assert(hash === '2820bb06ff404c0c54f537617cfe0785f4beac52');
+
+  bin = frameTree([
+    {mode: 0o100644, hash: "bda961d855586c7b1fb23d8670564de75a4f8a14", name: ".eslintrc"},
+    {mode: 0o100644, hash: "c8496abdeff42fcdf480bcb3a0dc47b868a76a4c", name: ".gitignore"},
+    {mode: 0o100644, hash: "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391", name: ".gitmodules"},
+    {mode: 0o100644, hash: "1f7ed3a68bf50c7ccd493bdfe7cc6e02af4d6bc5", name: "Makefile"},
+    {mode: 0o040000, hash: "0c13cd2a1e2a99bb8588055ac8aeededd28f6617", name: "doc"},
+    {mode: 0o100644, hash: "dca503d884eae43dbc8fff6e87680f20a6cbe2d5", name: "rollup.download.config.js"},
+    {mode: 0o100644, hash: "c79d89eb7c4a7999d73939a48e7a6850a6966154", name: "rollup.github.config.js"},
+    {mode: 0o100644, hash: "07ffac227910dad7a1124dc461010adec0ef7c25", name: "rollup.main.config.js"},
+    {mode: 0o100644, hash: "295696f6c2356a9ed5b92bb555ca84d457ebd35d", name: "rollup.server.config.js"},
+    {mode: 0o100644, hash: "f1d51539f7c0e596fbc829dd57d31777bf7478cb", name: "rollup.upload.config.js"},
+    {mode: 0o100644, hash: "39e2e7b2f353860beed15dcc8f551b549f34e982", name: "rollup.worker.config.js"},
+    {mode: 0o040000, hash: "22a45bd856aa57983e19510910ad3f267213fcc3", name: "src"},
+    {mode: 0o040000, hash: "0d0096d9a210ca51468305243973e5579066013a", name: "www"}
+  ]);
+  console.log(bin);
+  hash = sha1(bin);
+  console.log(hash);
+  obj = deframeTree(bin);
+  console.log(obj);
+  assert(hash === '0d1e7b7d91995b7ec7f2861e22c45b5f75484a16');
+
+  bin = frameBlob(`{
+  "extends": "eslint:recommended",
+  "env": {
+    "es6": true,
+    "browser": true
+  },
+  "parserOptions": {
+    "sourceType": "module",
+  },
+  "rules": {
+    "no-console": 0
+  }
+}
+`);
+  console.log(bin);
+  hash = sha1(bin);
+  console.log(hash);
+  obj = deframeBlob(bin);
+  console.log(obj);
+  assert(hash === 'bda961d855586c7b1fb23d8670564de75a4f8a14');
+}
+// test();
