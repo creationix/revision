@@ -1,9 +1,10 @@
 // A simple mime database.
 let types;
 
-export let defaultMime = "application/octet-stream";
+export let defaultBinary = "application/octet-stream";
+export let defaultText = "text/plain";
 
-export function guess(path) {
+export function guess(path, isText) {
   path = path.toLowerCase().trim();
   var index = path.lastIndexOf("/");
   if (index >= 0) {
@@ -13,7 +14,7 @@ export function guess(path) {
   if (index >= 0) {
     path = path.substr(index + 1);
   }
-  return types[path] || defaultMime;
+  return types[path] || ((isText && isText()) ? defaultText : defaultBinary);
 }
 
 // Borrowed and passed around from who knows where, last grabbed from connect.

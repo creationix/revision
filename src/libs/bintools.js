@@ -300,3 +300,22 @@ export function uint64(value) {
     uint32(value % 0x100000000)
   ];
 }
+
+// If the first 1 bit of the byte is 0,that character is 1 byte width and this is the byte.
+// If the first 2 bit of the byte is 10,that byte is not the first byte of a character
+// If the first 3 bit is 110,that character is 2 byte width and this is the first byte
+// If the first 4 bit is 1110,that character is 3 byte width and this is the first byte
+// If the first 5 bit is 11110,that character is 4 byte width and this is the first byte
+// If the first 6 bit is 111110,that character is 5 byte width and this is the first byte
+export function isUTF8(bin) {
+  let i = 0, l = bin.length;
+  while (i < l) {
+    if (bin[i] < 0x80) i++;
+    else if (bin[i] < 0xc0) return false;
+    else if (bin[i] < 0xe0) i += 2;
+    else if (bin[i] < 0xf0) i += 3;
+    else if (bin[i] < 0xf8) i += 4;
+    else if (bin[i] < 0xfc) i += 5;
+  }
+  return i === l;
+}

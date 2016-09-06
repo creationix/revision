@@ -51,10 +51,6 @@ tree-view span[class^="icon-"]::before {
 }
 `);
 
-function pathJoin(base, path) {
-  return path ? base + "/" + path : base;
-}
-
 export function TreeView(rootName, rootHash) {
   let root = [0, new Link(rootHash)];
   let data = localStorage.getItem("OPEN_DIRS");
@@ -65,7 +61,7 @@ export function TreeView(rootName, rootHash) {
 
   function render() {
     return h('tree-view', {onclick,oncontextmenu}, [
-      h('ul', [].concat(renderNode("", rootName, root)))
+      h('ul', [].concat(renderNode(rootName, rootName, root)))
     ]);
   }
 
@@ -86,8 +82,7 @@ export function TreeView(rootName, rootHash) {
       if (evt.defaultPrevented) return;
     }
     if (data.type === 'tree') {
-      let fullPath = pathJoin(rootName, data.path);
-      openDirs[fullPath] = !openDirs[fullPath];
+      openDirs[data.path] = !openDirs[data.path];
       localStorage.setItem("OPEN_DIRS", JSON.stringify(openDirs));
       projector.scheduleRender();
       return;
@@ -114,8 +109,7 @@ export function TreeView(rootName, rootHash) {
   function renderTree(path, name, value) {
     let children = value.children;
     let entries = [];
-    let fullPath = pathJoin(rootName, path)
-    let open = children && openDirs[fullPath];
+    let open = children && openDirs[path];
     if (open) {
       let keys = Object.keys(children).sort(function (a, b) {
         var A = children[a][0],

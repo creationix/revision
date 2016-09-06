@@ -6,7 +6,7 @@ import { run } from "./async";
 import { makeRead, makeWrite } from "./gen-channel";
 import { decoder, encoder } from "./http-codec";
 import { encode, decode, acceptKey } from "./websocket-codec";
-import { flatten } from "./bintools";
+import { flatten, isUTF8 } from "./bintools";
 import { sha1 } from "./sha1";
 import { readFile as readFileNode } from "fs";
 import { guess } from "./mime"
@@ -287,7 +287,7 @@ export function files(root) {
     });
     if (!data) return yield* next();
     res.code = 200;
-    res.headers.set("Content-Type", guess(path));
+    res.headers.set("Content-Type", guess(path, ()=>isUTF8(data)));
     res.body = data;
   };
 }
