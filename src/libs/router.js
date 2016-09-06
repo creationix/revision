@@ -1,5 +1,6 @@
 import { compileRoute } from "./weblit-tools";
 import { createProjector } from "./maquette";
+import { notFound } from "../components/notfound"
 
 export let projector = createProjector();
 
@@ -23,6 +24,7 @@ function router() {
     if (!params) continue;
     last = url;
     let render = route(params);
+    if (render === false) render = notFound;
     if (!render) return;
     if (typeof render !== 'function') {
       let value = render;
