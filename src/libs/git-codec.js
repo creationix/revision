@@ -3,16 +3,22 @@ import {
   binToRaw, strToBin, binToStr, hexToBin, binToHex
 } from "./bintools"
 
+export let treeMode   = 0o40000;
+export let blobMode   = 0o100644;
+export let execMode   = 0o100755;
+export let symMode    = 0o120000;
+export let commitMode = 0o160000;
+
 let modes;
 export function getModes() {
   if (modes) return modes;
   return modes = {
-    tree:   0o40000,
-    blob:   0o100644,
-    file:   0o100644,
-    exec:   0o100755,
-    sym:    0o120000,
-    commit: 0o160000
+    tree:   treeMode,
+    blob:   blobMode,
+    file:   blobMode,
+    exec:   execMode,
+    sym:    symMode,
+    commit: commitMode
   };
 }
 

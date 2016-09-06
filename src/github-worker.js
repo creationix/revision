@@ -1,14 +1,21 @@
 import { run, runAll } from "./libs/async"
 import { binToStr } from "./libs/bintools"
-import { save } from "./libs/link"
+import { saveCommit, saveTree, saveBlob } from "./libs/link"
+import { frameCommit } from "./libs/git-codec"
+import { sha1 } from "./libs/sha1"
 import "./libs/cas-idb"
 
 let GITHUB_ACCESS_TOKEN;
 self.onmessage = function(evt) {
   GITHUB_ACCESS_TOKEN = evt.data.token;
   run(readCommit(evt.data.owner, evt.data.repo, evt.data.ref))
-    .then(self.postMessage)
-    .catch(self.postMessage);
+    .then((out) => {
+      console.log("OUT", out);
+      self.postMessage(out);
+    })
+    .catch(err => {
+      throw err;
+    });
 };
 
 function* get(path, format) {
@@ -71,17 +78,97 @@ let modeToRead = {
    '40000': readTree, // tree
   '040000': readTree, // tree
   '100644': readBlob, // blob
-  '100755': readExec, // exec
-  '120000': readSym, // sym
+  '100755': readBlob, // exec
+  '120000': readBlob, // sym
   '160000': readSubmodule  // commit
+}
+
+function decodeCommit(result) {
+  return {
+    tree: result.tree.sha,
+    parents: result.parents.map(function (object) {
+      return object.sha;
+    }),
+    author: pickPerson(result.author),
+    committer: pickPerson(result.committer),
+    message: result.message
+  };
+}
+
+function pickPerson(person) {
+  return {
+    name: person.name,
+    email: person.email,
+    date: parseDate(person.date)
+  };
+}
+
+function parseDate(string) {
+  // TODO: test this once GitHub adds timezone information
+  var match = string.match(/(-?)([0-9]{2}):([0-9]{2})$/);
+  var date = new Date(string);
+  var timezoneOffset = 0;
+  if (match) {
+    timezoneOffset = (match[1] === "-" ? 1 : -1) * (
+      parseInt(match[2], 10) * 60 + parseInt(match[3], 10)
+    );
+  }
+  return {
+    seconds: date.valueOf() / 1000,
+    offset: timezoneOffset
+  };
 }
 
 function* readCommit(owner, repo, sha) {
   sha = yield* deref(owner, repo, sha);
-  let commit = yield* gitLoad(owner, repo, sha, "commit");
-  // We're throwing away the commit information and returning the tree directly.
-  return yield* readTree(owner, repo, commit.tree.sha);
+  let result = yield* gitLoad(owner, repo, sha, "commit");
+  let treeHash = yield* readTree(owner, repo, result.tree.sha);
+  if (treeHash !== result.tree.sha) {
+    console.error("tree hash mismatch");
+  }
+  let commit = decodeCommit(result);
+  fixDate("commit", commit, sha);
+  return yield* saveCommit(commit);
 }
+
+
+// GitHub has a nasty habit of stripping whitespace from messages and losing
+// the timezone.  This information is required to make our hashes match up, so
+// we guess it by mutating the value till the hash matches.
+// If we're unable to match, we will just force the hash when saving to the cache.
+function fixDate(type, value, hash) {
+  if (type !== "commit" && type !== "tag") return;
+  // Add up to 3 extra newlines and try all 30-minutes timezone offsets.
+  var clone = JSON.parse(JSON.stringify(value));
+  let frame = type === "commit" ? frameCommit : null;
+  for (var x = 0; x < 3; x++) {
+    for (var i = -720; i < 720; i += 30) {
+      if (type === "commit") {
+        clone.author.date.offset = i;
+        clone.committer.date.offset = i;
+      }
+      else if (type === "tag") {
+        clone.tagger.date.offset = i;
+      }
+      let actual = sha1(frame(clone));
+      if (hash !== actual) continue;
+      // Apply the changes and return.
+      value.message = clone.message;
+      if (type === "commit") {
+        value.author.date.offset = clone.author.date.offset;
+        value.committer.date.offset = clone.committer.date.offset;
+      }
+      else if (type === "tag") {
+        value.tagger.date.offset = clone.tagger.date.offset;
+      }
+      return true;
+    }
+    clone.message += "\n";
+  }
+  return false;
+}
+
+
 
 function* readTree(owner, repo, sha, path, gitmodules) {
   let result = yield* gitLoad(owner, repo, sha, "tree");
@@ -97,27 +184,25 @@ function* readTree(owner, repo, sha, path, gitmodules) {
       owner, repo, entry.sha, newPath, gitmodules
     ));
   }
-  let tree = {};
+  let tree = [];
   (yield runAll(tasks)).forEach(function (item, i) {
     let entry = result.tree[i];
-    tree[entry.path] = item;
+    if (entry.sha !== item) {
+      console.log(entry);
+      console.error("HASH mismatch for tree entry: " + entry.path)
+    }
+    tree.push({
+      name: entry.path,
+      mode: parseInt(entry.mode, 8),
+      hash: item
+    });
   });
-  return [0, yield* save(tree)];
+  return yield* saveTree(tree);
 }
 
 function* readBlob(owner, repo, sha) {
   let buf = yield* gitLoad(owner, repo, sha, "blob");
-  return [1, yield* save(buf)];
-}
-
-function* readExec(owner, repo, sha) {
-  let buf = yield* gitLoad(owner, repo, sha, "blob");
-  return [2, yield* save(buf)];
-}
-
-function* readSym(owner, repo, sha) {
-  let bin = yield* gitLoad(owner, repo, sha, "blob");
-  return [3, binToStr(bin)];
+  return yield* saveBlob(buf);
 }
 
 function* readSubmodule(owner, repo, sha, path, gitmodules) {
@@ -131,5 +216,5 @@ function* readSubmodule(owner, repo, sha, path, gitmodules) {
   if (!remote) throw new Error(`No gitmodules entry for ${path}`);
   let match = remote.match(/github.com[:\/]([^\/]+)\/(.+?)(\.git)?$/);
   if (!match) throw new Error(`Submodule is not on github ${remote}`);
-  return [0, yield* readCommit(match[1], match[2], sha), remote, sha];
+  return yield* readCommit(match[1], match[2], sha);
 }

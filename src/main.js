@@ -51,18 +51,27 @@ route("edit/:name", function (params) {
 });
 
 import { run } from "./libs/async"
-import { load } from "./libs/link"
+import { loadCommit, loadTree, loadBlob } from "./libs/link"
 
 function loadByPath(path) {
   return run(function* () {
     let parts = path.split("/");
     let hash = localStorage.getItem(parts.shift());
     if (!hash) return;
+    let commit = yield* loadCommit(hash);
+    hash = commit.tree;
+    let load = parts.length ? loadTree : loadBlob;
     let node = yield* load(hash);
-    while (parts.length) {
-      let entry = node[parts.shift()];
-      if (!entry) return;
-      node = yield* load(entry[1]);
+    outer: while (parts.length) {
+      let part = parts.shift();
+      let load = parts.length ? loadTree : loadBlob;
+      for (let entry of node) {
+        if (entry.name === part) {
+          node = yield* load(entry.hash);
+          continue outer;
+        }
+      }
+      return;
     }
     return node;
   }());

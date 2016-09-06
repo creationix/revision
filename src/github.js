@@ -98,9 +98,8 @@ route("github-import/:owner/:repo/refs/:ref:", function githubImport(params) {
 
   return progress.render;
 
-  function onDone(entry) {
+  function onDone(hex) {
     let name = `${owner}-${repo}`;
-    let hex = binToHex(entry[1].hash);
     let x, i = 0, base = name;
     while ((x = localStorage.getItem(name)) && hex !== x) {
       name = `${base}-${++i}`;

@@ -1,9 +1,12 @@
+/*globals name:false*/
+
 import { h } from "../libs/maquette"
 import { run } from "../libs/async"
-import { Link } from "../libs/link"
 import { guess } from "../libs/mime";
 import { projector } from "../libs/router";
 import { style } from "../libs/style-inject"
+import { loadCommit, loadTree } from "../libs/link";
+import { commitMode, treeMode, blobMode, execMode, symMode } from "../libs/git-codec"
 
 style(`
 tree-view {
@@ -52,7 +55,11 @@ tree-view span[class^="icon-"]::before {
 `);
 
 export function TreeView(rootName, rootHash) {
-  let root = [0, new Link(rootHash)];
+  let root = {
+    name: rootName,
+    mode: commitMode,
+    hash: rootHash
+  };
   let data = localStorage.getItem("OPEN_DIRS");
   let openDirs = data ? JSON.parse(data) : {};
   openDirs[rootName] = true;
@@ -60,8 +67,8 @@ export function TreeView(rootName, rootHash) {
   return render;
 
   function render() {
-    return h('tree-view', {onclick,oncontextmenu}, [
-      h('ul', [].concat(renderNode(rootName, rootName, root)))
+    return h('tree-view', { onclick, oncontextmenu }, [
+      h('ul', [].concat(renderNode(rootName, root)))
     ]);
   }
 
@@ -90,87 +97,97 @@ export function TreeView(rootName, rootHash) {
   }
 
   function oncontextmenu(evt) {
-    console.log("CONTEXT", evt);
     let data = find(evt);
     if (!data) return;
     if (render.oncontextmenu && render.oncontextmenu(evt, data)) return;
   }
 
-  function renderNode(path, name, node) {
-    let value = node[1];
-    switch(node[0]) {
-      case 0: return renderTree(path, name, value);
-      case 1: return renderFile(path, name, value);
-      case 2: return renderFile(path, name, value, true);
-      case 3: return renderSym(path, name, value);
+  function renderNode(path, node) {
+    switch(node.mode) {
+      case commitMode: return renderTree(path, node, true);
+      case treeMode: return renderTree(path, node);
+      case blobMode: return renderFile(path, node);
+      case execMode: return renderFile(path, node, true);
+      case symMode: return renderSym(path, node);
     }
   }
 
-  function renderTree(path, name, value) {
+  function renderTree(path, value, isCommit) {
     let children = value.children;
     let entries = [];
     let open = children && openDirs[path];
     if (open) {
-      let keys = Object.keys(children).sort(function (a, b) {
-        var A = children[a][0],
-            B = children[b][0];
-        return A === B ? a.localeCompare(b) : A ? 1 : -1;
-      });
-      for (let key of keys) {
-        let subPath = (path ? path + "/" : "") + key;
-        entries.push(renderNode(subPath, key, children[key]));
+      for (let child of children) {
+        let subPath = (path ? path + "/" : "") + child.name;
+        entries.push(renderNode(subPath, child));
       }
     }
     else if (!children) {
-      run(value.resolve()).then(tree => {
-        value.children = tree;
+      run(function* () {
+        let hash = value.hash;
+        if (isCommit) {
+          value.commit = yield* loadCommit(hash);
+          hash = value.hash = value.commit.tree;
+        }
+        let tree = yield* loadTree(hash);
+        return tree;
+      }()).then(tree => {
+        value.children = tree.sort((a,b) => {
+          let A = a.mode === treeMode,
+              B = b.mode === treeMode;
+          return A === B ? a.name.localeCompare(b.name) : A ? -1 : 1;
+        });
         projector.scheduleRender();
       });
 
     }
     return h("li", {key:path}, [
       h('div.row', {
-        title: name,
+        title: value.hash,
         classes: {
           "icon-down-dir": open,
           "icon-right-dir": !open
         },
         'data-type': 'tree',
-        'data-name': name,
+        'data-hash': value.hash,
+        'data-mime': 'application/x-directory',
+        'data-name': value.name,
         'data-path': path
       }, [
-        h('span.icon-folder', [name])
+        h('span.icon-folder', [value.name])
       ]),
       h('ul', entries)
     ]);
   }
 
-  function renderFile(path, name, value, exec) {
+  function renderFile(path, value, exec) {
     let mime = guess(path);
     let icon = exec ? "icon-cog" : guessIcon(mime);
     return h('li', {key:path}, [
       h('div.row', {
-        title: name,
+        title: value.hash,
         'data-type': 'file',
+        'data-hash': value.hash,
         'data-mime': mime,
-        'data-name': name,
+        'data-name': value.name,
         'data-path': path
       }, [
-        h('span', { class: icon }, [name])
+        h('span', { class: icon }, [value.name])
       ])
     ]);
   }
 
-  function renderSym(path, name, value) {
+  function renderSym(path, value) {
     return h("li", {key: path}, [
       h("div.row", {
-        title: value,
+        title: value.hash,
         'data-type': 'link',
+        'data-hash': value.hash,
         'data-target': value,
-        'data-name': name,
+        'data-name': value.name,
         'data-path': path
       }, [
-        h('span.icon-link', [name])
+        h('span.icon-link', [value.name])
       ])
     ]);
   }

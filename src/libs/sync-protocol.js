@@ -1,4 +1,4 @@
-import { storage, scan } from "./link"
+import { storage, scanTree } from "./link"
 import { decode } from "./msgpack"
 import { run } from "./async"
 import { sha1 } from "./sha1"
@@ -125,7 +125,8 @@ export function* receive(rootHash, read, write, onUpdate) {
   return missing;
 
   function enqueue(obj) {
-    for (let link of scan(obj)) {
+    if (!Array.isArray(obj)) return;
+    for (let link of scanTree(obj)) {
       queue.push(link.toHex());
     }
   }
