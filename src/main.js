@@ -2,6 +2,8 @@ import { route } from "./libs/router";
 import { h } from "./libs/maquette"
 import { page } from "./components/page"
 import { TreeView } from "./components/tree-view"
+import { SplitView } from "./components/split-view"
+import { TextEdit } from "./components/text-edit"
 
 // Use IndexedDB for storage
 import "./libs/cas-idb"
@@ -25,5 +27,7 @@ route("edit/:name", function (params) {
   if (!hash) return false;
   document.title = `${params.name} - Revision Studio`;
   let tree = TreeView(params.name, hash);
-  return tree;
+  let editor = TextEdit();
+  let split = SplitView(tree, editor, 200);
+  return split;
 });
