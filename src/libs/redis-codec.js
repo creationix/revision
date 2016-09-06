@@ -1,5 +1,5 @@
 import {
-  flatten, strToBin, binToStr, binToRaw, rawToBin, indexOf
+  flatten, strToBin, binToStr, binToRaw, rawToBin, indexOf, parseDec
 } from "./bintools"
 
 // Values come in, Uint8Array comes out
@@ -63,14 +63,14 @@ function innerDecode(chunk, offset) {
       let index = indexOf(chunk, '\r\n', offset);
       if (index < 0) return;
       return [
-        parseInt(binToRaw(chunk, offset + 1, index), 10),
+        parseDec(chunk, offset + 1, index),
         index + 2
       ];
     }
     case 36: { // '$' Bulk String
       let index = indexOf(chunk, '\r\n', offset);
       if (index < 0) return;
-      let len = parseInt(binToRaw(chunk, offset + 1, index), 10);
+      let len = parseDec(chunk, offset + 1, index);
       if (len < 0) return [
         null,
         index + 2
@@ -86,7 +86,7 @@ function innerDecode(chunk, offset) {
     case 42: { // '*' List
       let index = indexOf(chunk, '\r\n', offset);
       if (index < 0) return;
-      let len = parseInt(binToRaw(chunk, offset + 1, index), 10);
+      let len = parseDec(chunk, offset + 1, index);
       if (len < 0) return [
         null,
         index + 2

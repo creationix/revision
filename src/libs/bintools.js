@@ -18,6 +18,10 @@ export function addInspect() {
 //   hex - a string holding binary data as lowercase hexadecimal.
 //   b64 - a string holding binary data in base64 encoding.
 
+export function isBin(bin) {
+  return bin instanceof Uint8Array;
+}
+
 // Convert a raw string into a Uint8Array
 export function rawToBin(raw, start, end) {
   raw = '' + raw;
@@ -318,4 +322,28 @@ export function isUTF8(bin) {
     else if (bin[i] < 0xfc) i += 5;
   }
   return i === l;
+}
+
+export function parseOct(bin, start, end) {
+  let val = 0, sign = 1;
+  if (bin[start] === 0x2d) {
+    start++;
+    sign = -1;
+  }
+  while (start < end) {
+    val = (val << 3) + bin[start++] - 0x30;
+  }
+  return sign * val;
+}
+
+export function parseDec(bin, start, end) {
+  let val = 0, sign = 1;
+  if (bin[start] === 0x2d) {
+    start++;
+    sign = -1;
+  }
+  while (start < end) {
+    val = val * 10 + bin[start++] - 0x30;
+  }
+  return sign * val;
 }
