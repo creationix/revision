@@ -30,6 +30,13 @@ function applyMask(data, mask) {
 }
 
 export function decode(chunk) {
+  let out = decodeRaw(chunk);
+  if (!out) return;
+  out[0] = out[0].payload;
+  return out;
+}
+
+export function decodeRaw(chunk) {
   if (!chunk) return;
   if (chunk.length < 2) return;
   let len = chunk[1] & 0x7f;
@@ -82,6 +89,23 @@ export function decode(chunk) {
 }
 
 export function encode(item) {
+  if (item === undefined) return;
+  if (typeof item === "string") {
+    return encodeRaw({
+      opcode: 1,
+      payload: item
+    });
+  }
+  if (item instanceof Uint8Array) {
+    return encodeRaw({
+      opcode: 2,
+      payload: item
+    });
+  }
+  throw new TypeError("Simple Websocket encoder only accepts string and Uint8Array buffers");
+}
+
+export function encodeRaw(item) {
   if (typeof item === "string") {
     item = { opcode: 1, payload: item };
   }

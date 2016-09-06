@@ -12,7 +12,7 @@ progress-bar {
   height: 3em;
 }
 progress-bar .progress {
-  transition: width 0.5s;
+  transition: width 0.33s;
   background-color: #069;
   height: 3em;
   box-shadow: inset 0 0 30px #58f;

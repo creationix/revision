@@ -47,7 +47,7 @@ function innerDecode(chunk, offset) {
       let index = indexOf(chunk, '\r\n', offset);
       if (index < 0) return;
       return [
-        binToRaw(chunk, offset + 1, index),
+        chunk.slice(offset + 1, index),
         index + 2
       ];
     }
@@ -79,7 +79,7 @@ function innerDecode(chunk, offset) {
           end = start + len;
       if (chunk.length < end + 2) return;
       return [
-        binToRaw(chunk, start, end),
+        chunk.slice(start, end),
         end + 2
       ];
     }
@@ -107,9 +107,8 @@ function innerDecode(chunk, offset) {
     default: {
       let index = indexOf(chunk, '\r\n', offset);
       if (index < 0) return;
-      let str = binToRaw(chunk, offset, index);
       return [
-        str.split(' '),
+        binToRaw(chunk, offset, index).split(' ').map(rawToBin),
         index + 2
       ];
     }

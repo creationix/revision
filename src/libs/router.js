@@ -41,7 +41,8 @@ function router() {
 
 export function go(path, preserve) {
   if (preserve) {
-    localStorage.setItem("ROUTE_BOOKMARK", location.hash);
+    if (preserve === true) preserve = location.hash;
+    localStorage.setItem("ROUTE_BOOKMARK", preserve);
   }
   location.hash = path;
 }

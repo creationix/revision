@@ -4,3 +4,7 @@ github-worker.js
 github-worker.js.map
 main.js
 main.js.map
+upload-worker.js
+upload-worker.js.map
+download-worker.js
+download-worker.js.map
