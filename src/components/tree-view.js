@@ -61,19 +61,30 @@ export function TreeView(rootName, rootHash) {
   let openDirs = data ? JSON.parse(data) : {};
   openDirs[rootName] = true;
 
-  return function () {
-    return h('tree-view', {onclick}, [
-      h('ul', [].concat(render("", rootName, root)))
+  return render;
+
+  function render() {
+    return h('tree-view', {onclick,oncontextmenu}, [
+      h('ul', [].concat(renderNode("", rootName, root)))
     ]);
   }
 
-  function onclick(evt) {
+  function find(evt) {
     let node = evt.target;
     while (!node.dataset.type) {
       node = node.parentElement
       if (node === document.body) return;
     }
-    let data = node.dataset;
+    return node.dataset;
+  }
+
+  function onclick(evt) {
+    let data = find(evt);
+    if (!data) return;
+    if (render.onclick) {
+      render.onclick(evt, data);
+      if (evt.defaultPrevented) return;
+    }
     if (data.type === 'tree') {
       let fullPath = pathJoin(rootName, data.path);
       openDirs[fullPath] = !openDirs[fullPath];
@@ -81,10 +92,16 @@ export function TreeView(rootName, rootHash) {
       projector.scheduleRender();
       return;
     }
-    console.log(data.type, data.path);
   }
 
-  function render(path, name, node) {
+  function oncontextmenu(evt) {
+    console.log("CONTEXT", evt);
+    let data = find(evt);
+    if (!data) return;
+    if (render.oncontextmenu && render.oncontextmenu(evt, data)) return;
+  }
+
+  function renderNode(path, name, node) {
     let value = node[1];
     switch(node[0]) {
       case 0: return renderTree(path, name, value);
@@ -107,7 +124,7 @@ export function TreeView(rootName, rootHash) {
       });
       for (let key of keys) {
         let subPath = (path ? path + "/" : "") + key;
-        entries.push(render(subPath, key, children[key]));
+        entries.push(renderNode(subPath, key, children[key]));
       }
     }
     else if (!children) {

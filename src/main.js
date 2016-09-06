@@ -27,6 +27,13 @@ route("edit/:name", function (params) {
   if (!hash) return false;
   document.title = `${params.name} - Revision Studio`;
   let tree = TreeView(params.name, hash);
+  tree.onclick = function (evt, entry) {
+    console.log("click", evt, entry);
+  }
+  tree.oncontextmenu = function (evt, entry) {
+    evt.preventDefault();
+    console.log("contextmenu", evt, entry);
+  }
   let editor = TextEdit();
   let split = SplitView(tree, editor, 200);
   return split;
