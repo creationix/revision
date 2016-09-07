@@ -1,0 +1,30 @@
+{
+  "name": "revision",
+  "version": "1.0.0",
+  "description": "",
+  "main": "build.js",
+  "directories": {
+    "doc": "doc"
+  },
+  "dependencies": {
+  },
+  "devDependencies": {
+    "rollup": "^0.34.13",
+    "rollup-plugin-typescript": "^0.8.1"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "node build.js",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/creationix/revision.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/creationix/revision/issues"
+  },
+  "homepage": "https://github.com/creationix/revision#readme"
+}
