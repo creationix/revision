@@ -44,9 +44,6 @@ route("github/token/:token", function githubStoreToken(params: { token: string})
 });
 
 route("github/import", function githubImportForm() {
-  if (!localStorage.getItem("GITHUB_ACCESS_TOKEN")) {
-    return go("github/auth", true);
-  }
   document.title = 'GitHub Import Form - Revision Studio';
   return page("GitHub Import", [
     h('div.pure-u-1.pure-u-md-1-3', [
@@ -80,9 +77,9 @@ route("github/import", function githubImportForm() {
 route("github/import/:owner/:repo/refs/:ref:", function githubImport(params: {
   owner: string, repo: string, ref: string
 }) {
-  document.title = `Importing ${params.repo}/${params.repo} - Revision Studio`;
   let token = localStorage.getItem("GITHUB_ACCESS_TOKEN");
   if (!token) return go("github/auth", true);
+  document.title = `Importing ${params.repo}/${params.repo} - Revision Studio`;
   let value = 0,
       max = 0;
   let owner = params.owner,

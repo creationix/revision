@@ -164,7 +164,7 @@ async function readCommit(owner : string, repo : string, sha : string): Promise<
     console.error("tree hash mismatch");
   }
   return treeHash;
-  //
+  // TODO: maybe later include commits and submodules in import
   // let commit = decodeCommit(result);
   // fixDate("commit", commit, sha);
   // return await saveCommit(commit);
@@ -221,6 +221,12 @@ async function readTree(owner: string, repo: string, sha: string, path? :string,
     let hash = await modeToRead[entry.mode](
       owner, repo, entry.sha, newPath, gitmodules
     )
+
+    // TODO: remove this once we support commits in the tree again
+    // This converts commits to tree in type since we're collapsing
+    // the graph anyway.
+    if (entry.mode === "160000") entry.mode = "40000"
+
     if (entry.sha !== hash) {
       console.log(entry);
       console.error("HASH mismatch for tree entry: " + entry.path)

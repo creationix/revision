@@ -19,7 +19,7 @@ route("", function () {
   document.title = `Revision Studio`;
 
   return page("Revison Studio", h("div.pure-u-1.pure-u-md-1-1", [
-    h('a.pure-button.pure-button-primary', {href:"#github-import"}, "Import from github")
+    h('a.pure-button.pure-button-primary', {href:"#github/import"}, "Import from github")
   ]));
 });
 
