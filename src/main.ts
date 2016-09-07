@@ -23,11 +23,9 @@ route("", function () {
   ]));
 });
 
-route("edit/:name", function (params) {
-  let hash = localStorage.getItem(params.name);
-  if (!hash) return false;
+route(":name/:hash", function (params: {name:string, hash: string}) {
   document.title = `${params.name} - Revision Studio`;
-  let tree = TreeView(params.name, hash);
+  let tree = TreeView(params.name, params.hash);
   tree.onclick = onClick
   tree.oncontextmenu = onMenu;
   let editor = TextEdit();

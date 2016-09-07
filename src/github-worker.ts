@@ -1,3 +1,5 @@
+/// <reference path="typings/lib.webworker.d.ts"/>
+/// <reference path="typings/whatwg-fetch.d.ts"/>
 import { binToStr } from "./libs/bintools"
 import { saveCommit, saveTree, saveBlob } from "./libs/link"
 import { frameCommit } from "./libs/git-codec"
@@ -5,21 +7,21 @@ import { sha1 } from "./libs/sha1"
 import "./libs/cas-idb"
 
 let GITHUB_ACCESS_TOKEN;
-self.onmessage = function(evt) {
+onmessage = function(evt) {
   GITHUB_ACCESS_TOKEN = evt.data.token;
   readCommit(evt.data.owner, evt.data.repo, evt.data.ref)
     .then((out) => {
-      self.postMessage(out);
+      postMessage(out);
     })
     .catch(err => {
       throw err;
     });
 };
 
-async function get(path, format) {
+async function get(path: string, format?: string) : Promise<any> {
   format = format || "json";
   let url = `https://api.github.com/${path}`;
-  let headers = {
+  let headers : any = {
     Accept: format === 'arrayBuffer' || format === 'text' ?
       "application/vnd.github.v3.raw" :
       "application/vnd.github.v3+json"
@@ -33,7 +35,7 @@ async function get(path, format) {
 }
 
 async function gitLoad(owner, repo, sha, type) {
-  self.postMessage(1);
+  postMessage(1);
   let result = await get(
     `repos/${owner}/${repo}/git/${type}s/${sha}`,
     type === "blob" ? "arrayBuffer" : "json"
@@ -41,7 +43,7 @@ async function gitLoad(owner, repo, sha, type) {
   if (result) {
     if (type === "blob") result = new Uint8Array(result);
   }
-  self.postMessage(-1);
+  postMessage(-1);
   return result;
 }
 
@@ -117,16 +119,55 @@ function parseDate(string) {
   };
 }
 
-async function readCommit(owner, repo, sha) {
+interface GithubPerson {
+  date: string
+  name: string
+  email: string
+}
+
+interface GithubLink {
+  url: string
+  sha: string
+}
+
+interface GithubCommit {
+  sha: string
+  url: string
+  author: GithubPerson
+  committer: GithubPerson
+  message: string
+  tree: GithubLink
+  parents: GithubLink[]
+}
+
+interface GithubTree {
+  sha: string
+  url: string
+  tree: GithubTreeEntry[]
+  truncated : boolean
+}
+
+interface GithubTreeEntry {
+  path: string
+  mode: string
+  type: string
+  size: number
+  sha: string
+  url: string
+}
+
+async function readCommit(owner : string, repo : string, sha : string): Promise<string> {
   sha = await deref(owner, repo, sha);
-  let result = await gitLoad(owner, repo, sha, "commit");
+  let result = await gitLoad(owner, repo, sha, "commit") as GithubCommit;
   let treeHash = await readTree(owner, repo, result.tree.sha);
   if (treeHash !== result.tree.sha) {
     console.error("tree hash mismatch");
   }
-  let commit = decodeCommit(result);
-  fixDate("commit", commit, sha);
-  return await saveCommit(commit);
+  return treeHash;
+  //
+  // let commit = decodeCommit(result);
+  // fixDate("commit", commit, sha);
+  // return await saveCommit(commit);
 }
 
 
@@ -167,34 +208,30 @@ function fixDate(type, value, hash) {
 }
 
 
-
-async function readTree(owner, repo, sha, path, gitmodules) {
-  let result = await gitLoad(owner, repo, sha, "tree");
-  let tasks = [];
+async function readTree(owner: string, repo: string, sha: string, path? :string, gitmodules?: any) {
+  let result = await gitLoad(owner, repo, sha, "tree") as GithubTree;
+  let tree = [] as GitTree;
   for (let entry of result.tree) {
     if (!gitmodules && entry.path === ".gitmodules") {
       gitmodules = parseGitmodules(
-        await gitLoad(owner, repo, entry.sha, "blob")
+        await gitLoad(owner, repo, entry.sha, "blob") as Uint8Array
       );
     }
     let newPath = path ? `${path}/${entry.path}` : entry.path;
-    tasks.push(modeToRead[entry.mode](
+    let hash = await modeToRead[entry.mode](
       owner, repo, entry.sha, newPath, gitmodules
-    ));
-  }
-  let tree = [];
-  (await runAll(tasks)).forEach(function (item, i) {
-    let entry = result.tree[i];
-    if (entry.sha !== item) {
+    )
+    if (entry.sha !== hash) {
       console.log(entry);
       console.error("HASH mismatch for tree entry: " + entry.path)
     }
+
     tree.push({
       name: entry.path,
       mode: parseInt(entry.mode, 8),
-      hash: item
+      hash: hash
     });
-  });
+  }
   return await saveTree(tree);
 }
 

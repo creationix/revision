@@ -1,15 +1,20 @@
 import { compileRoute } from "./weblit-tools";
-import { createProjector } from "./maquette";
+import { createProjector, VNode } from "./maquette";
 import { notFound } from "../components/notfound"
 
-export let projector = createProjector();
+export let projector = createProjector({});
 
 window.addEventListener('hashchange', router);
 window.addEventListener('load', router);
 
 let routes = [];
 
-export function route(pattern, fn) {
+interface Route {
+  (params?: Object): void | VNode | (() => VNode)
+  match?: (path: string) => (void | Object)
+}
+
+export function route(pattern: string, fn: Route) {
   fn.match = compileRoute(pattern);
   routes.push(fn);
 }
@@ -41,17 +46,17 @@ function router() {
   location.hash = last;
 }
 
-export function go(path, preserve) {
+export function go(path: string, preserve?: string|boolean) {
   if (preserve) {
     if (preserve === true) preserve = location.hash;
-    localStorage.setItem("ROUTE_BOOKMARK", preserve);
+    localStorage.setItem("ROUTE_BOOKMARK", preserve as string);
   }
   location.hash = path;
 }
 
 export function restore() {
   let path = localStorage.getItem("ROUTE_BOOKMARK") || '';
-  localStorage.removeItem("ROUTE_BOOKMARK", location.hash);
+  localStorage.removeItem("ROUTE_BOOKMARK");
   location.hash = path;
 }
 

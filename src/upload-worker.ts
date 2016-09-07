@@ -1,10 +1,11 @@
+/// <reference path="typings/lib.webworker.d.ts"/>
 import "./libs/cas-idb"
 import { connect } from "./libs/websocket-browser"
 import { send } from "./libs/sync-protocol"
 
-self.onmessage = function(evt) {
+onmessage = function(evt) {
   upload(evt.data.url, evt.data.hash)
-    .then(self.postMessage)
+    .then(postMessage)
     .catch(err => {
       throw err;
     });

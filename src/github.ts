@@ -1,16 +1,16 @@
 import { route } from "./libs/router";
-import { h } from "./libs/maquette"
+import { h, VNode } from "./libs/maquette"
 import { go, restore } from "./libs/router"
 import { binToHex } from "./libs/bintools"
 import { page } from "./components/page"
 import { ProgressBar } from "./components/progress-bar"
 
-route("github-auth", function githubAuth() {
+route("github/auth", function githubAuth() {
   document.title = 'Github Authentication - Revision Studio';
   return page("Github Authentication", [
     h('div.pure-u-1.pure-u-md-1-2', [
       h('p', [
-        h('a.pure-button.pure-button-primary', {href: '/github-oauth'}, ['Use Oauth Flow'])
+        h('a.pure-button.pure-button-primary', {href: '/github/oauth'}, ['Use Oauth Flow'])
       ]),
       h('p', [
         'Or create a personal access token ',
@@ -33,19 +33,19 @@ route("github-auth", function githubAuth() {
   function onsubmit(evt) {
     evt.preventDefault();
     let token = evt.target.token.value;
-    if (token) go("github-token/" + token);
+    if (token) go("github/token/" + token);
   }
 });
 
-route("github-token/:token", function githubStoreToken(params) {
+route("github/token/:token", function githubStoreToken(params: { token: string}) {
   document.title = 'Storing GitHub Token - Revision Studio';
   localStorage.setItem("GITHUB_ACCESS_TOKEN", params.token);
   restore();
 });
 
-route("github-import", function githubImportForm() {
+route("github/import", function githubImportForm() {
   if (!localStorage.getItem("GITHUB_ACCESS_TOKEN")) {
-    return go("github-auth", true);
+    return go("github/auth", true);
   }
   document.title = 'GitHub Import Form - Revision Studio';
   return page("GitHub Import", [
@@ -67,20 +67,22 @@ route("github-import", function githubImportForm() {
       h('p', ['The Git Ref is optional and defaults to the master branch.'])
     ])
   ]);
-  function onsubmit(evt) {
+  function onsubmit(evt: any) {
     evt.preventDefault();
     let username = evt.target.username.value;
     let project = evt.target.project.value;
     let ref = evt.target.ref.value || "heads/master";
     if (!(username && project && ref)) return;
-    return go(`github-import/${username}/${project}/refs/${ref}`);
+    return go(`github/import/${username}/${project}/refs/${ref}`);
   }
 });
 
-route("github-import/:owner/:repo/refs/:ref:", function githubImport(params) {
+route("github/import/:owner/:repo/refs/:ref:", function githubImport(params: {
+  owner: string, repo: string, ref: string
+}) {
   document.title = `Importing ${params.repo}/${params.repo} - Revision Studio`;
   let token = localStorage.getItem("GITHUB_ACCESS_TOKEN");
-  if (!token) return go("github-auth", true);
+  if (!token) return go("github/auth", true);
   let value = 0,
       max = 0;
   let owner = params.owner,
@@ -96,7 +98,7 @@ route("github-import/:owner/:repo/refs/:ref:", function githubImport(params) {
     else onDone(evt.data);
   };
 
-  return progress.render;
+  return progress;
 
   function onDone(hex) {
     console.log("Imported", hex);
@@ -106,7 +108,7 @@ route("github-import/:owner/:repo/refs/:ref:", function githubImport(params) {
       name = `${base}-${++i}`;
     }
     localStorage.setItem(name, hex);
-    go(`edit/${name}`);
+    go(`${name}/${hex}`);
   }
 
 });

@@ -1,8 +1,8 @@
-import { storage } from "./link";
+import { storage } from "./link"
 
-let db = {};
+let db = {}
 
-storage.get = hash => db[hash];
-storage.set = (hash, value) => { db[hash] = value; };
-storage.has = (hash) => db.hasOwnProperty(hash);
-storage.clear = () => { db = {}; };
+storage.get = async function(hash) { return db[hash] }
+storage.set = async function(hash, value) { db[hash] = value }
+storage.has = async function(hash) { return db.hasOwnProperty(hash) }
+storage.clear = async function() { db = {} }

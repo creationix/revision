@@ -1,4 +1,4 @@
-/// <reference path="libs/node.d.ts"/>
+/// <reference path="typings/node.d.ts"/>
 import { addInspect } from "./libs/bintools"; addInspect();
 import { Server, autoHeaders, logger, files, websocket, request } from "./libs/weblit";
 import { binToStr } from "./libs/bintools";
@@ -24,7 +24,7 @@ new Server()
 
   // When the browser wants to authenticate with github, it only needs to
   // open this page in a new window.
-  .route({ method: "GET", path: "/github-oauth"}, async function (req, res) {
+  .route({ method: "GET", path: "/github/oauth"}, async function (req, res) {
     let oauthState = Math.random().toString(36).substr(2);
     res.code = 302;
     res.headers.set("Location", 'https://github.com/login/oauth/authorize' +
@@ -35,7 +35,7 @@ new Server()
   // After the user authencates with github and authorizes us, they will be
   // redirected back to this url.  We need to fetch the token and give it to
   // the browser.
-  .route({ method: "GET", path: "/github-callback"}, async function (req, res) {
+  .route({ method: "GET", path: "/github/callback"}, async function (req, res) {
     let url = "https://github.com/login/oauth/access_token";
     let body = await request("POST", url, {
       "Accept": "application/json",
@@ -53,7 +53,7 @@ new Server()
       return;
     }
     res.code = 302;
-    res.headers.set("Location", `/#github-token/${result.access_token}`);
+    res.headers.set("Location", `/#github/token/${result.access_token}`);
     res.body = "Authorized, redirecting back to main site!\n";
   })
 

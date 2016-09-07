@@ -1,41 +1,20 @@
-import { h } from "../libs/maquette"
+import { h, VNode } from "../libs/maquette"
 import { projector, style } from "../libs/router"
 
-style(`
-  split-view {
-    position: absolute;
-    top: 0; bottom: 0;
-    left: 0; right: 0;
-    overflow: hidden;
-  }
-  split-view > div {
-    position: absolute;
-    height: 100%;
-    top: 0;
-    bottom: 0;
-  }
-  split-view > .left {
-    left: 0;
-    overflow: auto;
-  }
-  split-view > .right {
-    right: 0;
-    width: auto;
-    overflow: auto;
-  }
-  split-view > .resizer {
-    width: 5px;
-    cursor: ew-resize;
-  }
-`);
+interface SplitView {
+  (): VNode
+}
 
-export function SplitView(left, right, size) {
+export function SplitView(left: () => VNode, right: () => VNode, size: number) {
   let position = null;
   let isTouch;
   let horizontal = true;
   let orientation = "left";
 
-  return function () {
+  let split = render as SplitView
+  return split
+
+  function render() {
     if (size < 0) size = 0;
     return h("split-view", [
       h("div.left", {styles:{width:size + "px"}}, [].concat(left())),
@@ -124,3 +103,31 @@ export function SplitView(left, right, size) {
   }
 
 }
+
+style(`
+  split-view {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 0; right: 0;
+    overflow: hidden;
+  }
+  split-view > div {
+    position: absolute;
+    height: 100%;
+    top: 0;
+    bottom: 0;
+  }
+  split-view > .left {
+    left: 0;
+    overflow: auto;
+  }
+  split-view > .right {
+    right: 0;
+    width: auto;
+    overflow: auto;
+  }
+  split-view > .resizer {
+    width: 5px;
+    cursor: ew-resize;
+  }
+`);

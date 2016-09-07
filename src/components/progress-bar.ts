@@ -1,5 +1,36 @@
-import { h } from "../libs/maquette"
+import { h, VNode } from "../libs/maquette"
 import { projector, style } from "../libs/router"
+
+interface ProgressBar{
+  (): VNode
+  update: (done: number, total: number) => void
+}
+
+export function ProgressBar(message: string) {
+  let total = 0,
+      done = 0;
+
+  let progress = render as ProgressBar;
+  progress.update = update;
+  return progress;
+
+  function update(newDone, newTotal) {
+    done = newDone;
+    total = newTotal;
+    projector.scheduleRender();
+  }
+
+  function render() {
+    let percent = (done && total) ?
+      (done * 100 / total) : 0;
+    return h("progress-bar", [
+      h('div.progress', {styles:{width:`${percent}%`}}),
+      h('div.message', [
+        `${message} (${done}/${total})`
+      ])
+    ]);
+  }
+}
 
 style(`
 progress-bar {
@@ -29,26 +60,3 @@ progress-bar .message {
   font-family: ubuntu, sans-serif;
 }
 `);
-
-export function ProgressBar(message) {
-  let total = 0,
-      done = 0;
-
-  return { update, render };
-
-  function update(newDone, newTotal) {
-    done = newDone;
-    total = newTotal;
-    projector.scheduleRender();
-  }
-  function render() {
-    let percent = (done && total) ?
-      (done * 100 / total) : 0;
-    return h("progress-bar", [
-      h('div.progress', {styles:{width:`${percent}%`}}),
-      h('div.message', [
-        `${message} (${done}/${total})`
-      ])
-    ]);
-  }
-}

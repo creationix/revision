@@ -1,5 +1,12 @@
 import { style } from "../libs/router";
-import { h } from "../libs/maquette"
+import { h, VNode } from "../libs/maquette"
+
+export function page(title, body) {
+  return h('content-wrapper', [
+    h('h1', [].concat(title)),
+    h('div.pure-g', {key:title}, [].concat(body))
+  ]);
+}
 
 style(`
 content-wrapper {
@@ -9,10 +16,3 @@ content-wrapper {
   padding: 0 15px;
 }
 `);
-
-export function page(title, body) {
-  return h('content-wrapper', [
-    h('h1', [].concat(title)),
-    h('div.pure-g', {key:title}, [].concat(body))
-  ]);
-}

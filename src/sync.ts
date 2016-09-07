@@ -2,13 +2,13 @@ import { route } from "./libs/router";
 import { go, restore } from "./libs/router"
 import { ProgressBar } from "./components/progress-bar"
 
-route("export/:name", function saveProject(params) {
+route("export/:name", function saveProject(params: {name:string}) {
   let hash = localStorage.getItem(params.name);
   if (!hash) throw new Error("No such name: " + params.name);
   go(`upload/${hash}`, `edit/${params.name}`);
 });
 
-route("import/:name/:hash", function importProject(params) {
+route("import/:name/:hash", function importProject(params: {name:string,hash:string}) {
   let name = params.name;
   document.title = `Importing ${name} - Revision Studio`;
   let i = 0;
@@ -22,7 +22,7 @@ route("import/:name/:hash", function importProject(params) {
 
 let url = (""+document.location.origin + "/").replace(/^http/, 'ws');
 
-route("upload/:hash", function uploadHash(params) {
+route("upload/:hash", function uploadHash(params:{hash:string}) {
   let hash = params.hash;
   document.title = `Uploading ${hash} - Revision Studio`;
   let value = 0,
@@ -37,7 +37,7 @@ route("upload/:hash", function uploadHash(params) {
     else onDone(evt.data);
   };
 
-  return progress.render;
+  return progress;
 
   function onDone(missing) {
     console.log("Done Uploading", missing);
@@ -45,7 +45,7 @@ route("upload/:hash", function uploadHash(params) {
   }
 });
 
-route("download/:hash", function downloadHash(params) {
+route("download/:hash", function downloadHash(params:{hash:string}) {
   let hash = params.hash;
   document.title = `Downloading ${hash} - Revision Studio`;
   let value = 0,
@@ -60,7 +60,7 @@ route("download/:hash", function downloadHash(params) {
     else onDone(evt.data);
   };
 
-  return progress.render;
+  return progress;
 
   function onDone(missing) {
     console.log("Done Downloading", missing);
