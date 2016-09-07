@@ -1,4 +1,3 @@
-import { run, runAll } from "./libs/async"
 import { binToStr } from "./libs/bintools"
 import { saveCommit, saveTree, saveBlob } from "./libs/link"
 import { frameCommit } from "./libs/git-codec"
@@ -8,7 +7,7 @@ import "./libs/cas-idb"
 let GITHUB_ACCESS_TOKEN;
 self.onmessage = function(evt) {
   GITHUB_ACCESS_TOKEN = evt.data.token;
-  run(readCommit(evt.data.owner, evt.data.repo, evt.data.ref))
+  readCommit(evt.data.owner, evt.data.repo, evt.data.ref)
     .then((out) => {
       self.postMessage(out);
     })
@@ -17,7 +16,7 @@ self.onmessage = function(evt) {
     });
 };
 
-function* get(path, format) {
+async function get(path, format) {
   format = format || "json";
   let url = `https://api.github.com/${path}`;
   let headers = {
@@ -29,13 +28,13 @@ function* get(path, format) {
   if (GITHUB_ACCESS_TOKEN) {
     headers.Authorization = `token ${GITHUB_ACCESS_TOKEN}`;
   }
-  let res = yield fetch(url, {headers:headers});
-  return res && (yield res[format]());
+  let res = await fetch(url, {headers:headers});
+  return res && (await res[format]());
 }
 
-function* gitLoad(owner, repo, sha, type) {
+async function gitLoad(owner, repo, sha, type) {
   self.postMessage(1);
-  let result = yield* get(
+  let result = await get(
     `repos/${owner}/${repo}/git/${type}s/${sha}`,
     type === "blob" ? "arrayBuffer" : "json"
   );
@@ -67,9 +66,9 @@ function parseGitmodules(bin) {
   return config;
 }
 
-function* deref(owner, repo, ref) {
+async function deref(owner, repo, ref) {
   if (/^[0-9a-f]{40}$/.test(ref)) return ref;
-  let result = yield* get(`repos/${owner}/${repo}/git/refs/${ref}`);
+  let result = await get(`repos/${owner}/${repo}/git/refs/${ref}`);
   return result && result.object.sha;
 }
 
@@ -118,16 +117,16 @@ function parseDate(string) {
   };
 }
 
-function* readCommit(owner, repo, sha) {
-  sha = yield* deref(owner, repo, sha);
-  let result = yield* gitLoad(owner, repo, sha, "commit");
-  let treeHash = yield* readTree(owner, repo, result.tree.sha);
+async function readCommit(owner, repo, sha) {
+  sha = await deref(owner, repo, sha);
+  let result = await gitLoad(owner, repo, sha, "commit");
+  let treeHash = await readTree(owner, repo, result.tree.sha);
   if (treeHash !== result.tree.sha) {
     console.error("tree hash mismatch");
   }
   let commit = decodeCommit(result);
   fixDate("commit", commit, sha);
-  return yield* saveCommit(commit);
+  return await saveCommit(commit);
 }
 
 
@@ -169,13 +168,13 @@ function fixDate(type, value, hash) {
 
 
 
-function* readTree(owner, repo, sha, path, gitmodules) {
-  let result = yield* gitLoad(owner, repo, sha, "tree");
+async function readTree(owner, repo, sha, path, gitmodules) {
+  let result = await gitLoad(owner, repo, sha, "tree");
   let tasks = [];
   for (let entry of result.tree) {
     if (!gitmodules && entry.path === ".gitmodules") {
       gitmodules = parseGitmodules(
-        yield* gitLoad(owner, repo, entry.sha, "blob")
+        await gitLoad(owner, repo, entry.sha, "blob")
       );
     }
     let newPath = path ? `${path}/${entry.path}` : entry.path;
@@ -184,7 +183,7 @@ function* readTree(owner, repo, sha, path, gitmodules) {
     ));
   }
   let tree = [];
-  (yield runAll(tasks)).forEach(function (item, i) {
+  (await runAll(tasks)).forEach(function (item, i) {
     let entry = result.tree[i];
     if (entry.sha !== item) {
       console.log(entry);
@@ -196,15 +195,15 @@ function* readTree(owner, repo, sha, path, gitmodules) {
       hash: item
     });
   });
-  return yield* saveTree(tree);
+  return await saveTree(tree);
 }
 
-function* readBlob(owner, repo, sha) {
-  let buf = yield* gitLoad(owner, repo, sha, "blob");
-  return yield* saveBlob(buf);
+async function readBlob(owner, repo, sha) {
+  let buf = await gitLoad(owner, repo, sha, "blob");
+  return await saveBlob(buf);
 }
 
-function* readSubmodule(owner, repo, sha, path, gitmodules) {
+async function readSubmodule(owner, repo, sha, path, gitmodules) {
   let remote;
   for (let key in gitmodules.submodule) {
     let sub = gitmodules.submodule[key];
@@ -215,5 +214,5 @@ function* readSubmodule(owner, repo, sha, path, gitmodules) {
   if (!remote) throw new Error(`No gitmodules entry for ${path}`);
   let match = remote.match(/github.com[:\/]([^\/]+)\/(.+?)(\.git)?$/);
   if (!match) throw new Error(`Submodule is not on github ${remote}`);
-  return yield* readCommit(match[1], match[2], sha);
+  return await readCommit(match[1], match[2], sha);
 }

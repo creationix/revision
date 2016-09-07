@@ -1,5 +1,5 @@
-export function* connect(url) {
-  let socket = yield new Promise((resolve, reject) => {
+export async function connect(url) {
+  let socket = await new Promise((resolve, reject) => {
     let socket = new WebSocket(url);
     socket.binaryType = "arraybuffer";
     socket.onopen = () => resolve(socket);

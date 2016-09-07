@@ -1,4 +1,3 @@
-import { run } from "./libs/async";
 import { guess } from "./libs/mime";
 import { pathJoin } from "./libs/pathjoin";
 import { Link } from "./libs/link"
@@ -7,15 +6,15 @@ import "./libs/cas-idb"
 const CACHE_NAME = 'v1';
 const routePattern = /^https?:\/\/[^\/]+\/([0-9a-f]{40})(\/.*)$/;
 
-function wrap(gen) {
+function wrap(fn) {
   return function (event) {
-    event.waitUntil(run(gen(event)));
+    event.waitUntil(fn(event));
   };
 }
 
-self.addEventListener('install', wrap(function* () {
-  let cache = yield caches.open(CACHE_NAME);
-  yield cache.addAll([
+self.addEventListener('install', wrap(async function () {
+  let cache = await caches.open(CACHE_NAME);
+  await cache.addAll([
     '/',
     '/main.js',
     '/worker.js',
@@ -24,40 +23,40 @@ self.addEventListener('install', wrap(function* () {
     '/css/style.css',
     '/css/revision-icons.css'
   ]);
-  yield self.skipWaiting();
+  await self.skipWaiting();
 }));
 
-self.addEventListener('activate', wrap(function* () {
-  yield self.clients.claim();
+self.addEventListener('activate', wrap(async function () {
+  await self.clients.claim();
 }));
 
 
 self.addEventListener('fetch', function (event) {
-  return event.respondWith(run(function* () {
+  return event.respondWith(async function () {
     let match = event.request.url.match(routePattern);
-    if (!match) return yield* passthrough(event);
+    if (!match) return await passthrough(event);
     let root = new Link(match[1]),
         path = match[2];
-    return yield* serve(root, path);
+    return await serve(root, path);
 
-  }()));
+  }());
 });
 
-function* passthrough(event) {
-  let cache = yield caches.open(CACHE_NAME);
-  let response = yield cache.match(event.request);
+async function passthrough(event) {
+  let cache = await caches.open(CACHE_NAME);
+  let response = await cache.match(event.request);
   if (!response) {
-    response = yield fetch(event.request.clone());
+    response = await fetch(event.request.clone());
     if(response && response.status === 200 && response.type === 'basic') {
       var responseToCache = response.clone();
-      yield cache.put(event.request, responseToCache);
+      await cache.put(event.request, responseToCache);
     }
   }
   return response;
 }
 
-function* serve(root, path) {
-  let node = yield* root.resolve();
+async function serve(root, path) {
+  let node = await root.resolve();
   let part;
   for (part of path.split('/')) {
     if (!part) continue;
@@ -70,7 +69,7 @@ function* serve(root, path) {
   // Serve files directly with guessed mime-type
   if (node instanceof Link) {
     // Render file
-    let body = yield* node.resolve();
+    let body = await node.resolve();
     return new Response(body, {
       headers: {
         'Content-Type': guess(path),
@@ -81,7 +80,7 @@ function* serve(root, path) {
 
   // Resolve symlinks by redirecting internally to target.
   if (typeof node === "string") {
-    return yield* serve(root, pathJoin(path, "..", node));
+    return await serve(root, pathJoin(path, "..", node));
   }
 
   // Render HTML directory for trees.

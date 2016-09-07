@@ -10,9 +10,9 @@ interface RedisSocket {
   socket: any
 }
 // Usage:
-//   let call = yield connect({ port: 6379});
-//   console.log(yield* call("get", "name"));
-//   yield* call();
+//   let call = await connect({ port: 6379});
+//   console.log(await call("get", "name"));
+//   await call();
 export function connect(options) : Promise<RedisSocket> {
   let read, write, socket;
   return new Promise((resolve, reject) => {

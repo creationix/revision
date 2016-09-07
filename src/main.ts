@@ -49,5 +49,4 @@ route("edit/:name", function (params) {
 
 });
 
-import { run } from "./libs/async"
 import { loadCommit, loadTree, loadBlob } from "./libs/link"

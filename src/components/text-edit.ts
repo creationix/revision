@@ -2,6 +2,8 @@ import { h } from "../libs/maquette"
 import { projector, style } from "../libs/router"
 import { loadFile, saveFile } from "../libs/fs"
 import { isUTF8, binToStr, strToBin } from "../libs/bintools"
+import { fromTextArea } from "codemirror"
+import { guess } from "../libs/mime";
 
 style(`
 text-edit p {
@@ -13,7 +15,7 @@ text-edit p {
   position: absolute;
   top: 0;
 }
-text-edit textarea {
+text-edit code {
   position: absolute;
   top: 30px;
   bottom: 0;
@@ -28,6 +30,12 @@ text-edit textarea {
 `)
 
 let entries = {};
+
+function highlight(path, text) {
+  let mime = guess(path, ()=>true);
+  console.log(mime);
+  return text;
+}
 
 export function TextEdit() {
   let entry;
@@ -60,7 +68,9 @@ export function TextEdit() {
     else {
       body = [
         h('p', [entry.path + (entry.dirty ? "*" : "")]),
-        h('textarea', { onkeyup }, binToStr(entry.content))
+        h('pre', [
+          h('code', {contentEditable:true, onkeyup }, highlight(entry.path, binToStr(entry.content)))
+        ])
       ]
     }
     return h('text-edit', [].concat(body));

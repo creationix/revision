@@ -18,13 +18,13 @@ new Server()
   .use(autoHeaders) // To ensure we send proper HTTP headers
 
   // Serve up the sync protocol over websocket
-  .use(websocket(function* (req, read, write) {
-    yield* serve(read, write);
+  .use(websocket(async function (req, read, write) {
+    await serve(read, write);
   }))
 
   // When the browser wants to authenticate with github, it only needs to
   // open this page in a new window.
-  .route({ method: "GET", path: "/github-oauth"}, function* (req, res) {
+  .route({ method: "GET", path: "/github-oauth"}, async function (req, res) {
     let oauthState = Math.random().toString(36).substr(2);
     res.code = 302;
     res.headers.set("Location", 'https://github.com/login/oauth/authorize' +
@@ -35,9 +35,9 @@ new Server()
   // After the user authencates with github and authorizes us, they will be
   // redirected back to this url.  We need to fetch the token and give it to
   // the browser.
-  .route({ method: "GET", path: "/github-callback"}, function* (req, res) {
+  .route({ method: "GET", path: "/github-callback"}, async function (req, res) {
     let url = "https://github.com/login/oauth/access_token";
-    let body = yield request("POST", url, {
+    let body = await request("POST", url, {
       "Accept": "application/json",
       "Content-Type": "application/json"
     }, JSON.stringify({
@@ -45,7 +45,7 @@ new Server()
       client_secret: GITHUB_CLIENT_SECRET,
       code: req.query.code,
       state: req.query.state
-    }));
+    })) as Uint8Array;
     let result = JSON.parse(binToStr(body));
     if (result.error) {
       res.code = 401
