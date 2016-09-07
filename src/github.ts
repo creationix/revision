@@ -99,13 +99,7 @@ route("github/import/:owner/:repo/refs/:ref:", function githubImport(params: {
 
   function onDone(hex) {
     console.log("Imported", hex);
-    let name = `${owner}-${repo}`;
-    let x, i = 0, base = name;
-    while ((x = localStorage.getItem(name)) && hex !== x) {
-      name = `${base}-${++i}`;
-    }
-    localStorage.setItem(name, hex);
-    go(`${name}/${hex}`);
+    go(`${owner}-${repo}/${hex}`);
   }
 
 });

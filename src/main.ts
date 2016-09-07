@@ -24,6 +24,9 @@ route("", function () {
 });
 
 route(":name/:hash", function (params: {name:string, hash: string}) {
+  // Restrict the shape of the hash in the route match.
+  if (!/^[0-9a-f]{40}$/.test(params.hash)) return false;
+
   document.title = `${params.name} - Revision Studio`;
   let tree = TreeView(params.name, params.hash);
   tree.onclick = onClick

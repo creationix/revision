@@ -10,7 +10,7 @@ window.addEventListener('load', router);
 let routes = [];
 
 interface Route {
-  (params?: Object): void | VNode | (() => VNode)
+  (params?: Object): boolean | VNode | (() => VNode)
   match?: (path: string) => (void | Object)
 }
 
@@ -28,23 +28,23 @@ function router() {
     let params = route.match(url);
     if (!params) continue;
     last = url;
-    let render = route(params);
-    if (render === false) render = notFound;
-    if (!render) return;
-    if (typeof render !== 'function') {
-      let value = render;
-      render = () => value;
-    }
-    if (oldRender) {
-      projector.detach(oldRender);
-      document.body.textContent = '';
-    }
-    oldRender = render;
-    projector.append(document.body, render);
-    return;
+    let result = route(params);
+    if (result === false) continue;
+    if (result === true) return;
+    return redraw((typeof result === 'function') ? result : ()=>result);
   }
-  location.hash = last;
+  redraw(notFound);
 }
+
+function redraw(render) {
+  if (oldRender) {
+    projector.detach(oldRender);
+    document.body.textContent = '';
+  }
+  oldRender = render;
+  projector.append(document.body, render);
+}
+
 
 export function go(path: string, preserve?: string|boolean) {
   if (preserve) {
