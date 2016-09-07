@@ -1,7 +1,7 @@
 import { h, VNode } from "../libs/maquette"
 import { projector, style } from "../libs/router"
 
-interface SplitView {
+export interface SplitView {
   (): VNode
 }
 
@@ -17,8 +17,14 @@ export function SplitView(left: () => VNode, right: () => VNode, size: number) {
   function render() {
     if (size < 0) size = 0;
     return h("split-view", [
-      h("div.left", {styles:{width:size + "px"}}, [].concat(left())),
-      h("div.right", {styles:{left:(size + 5) + "px"}}, [].concat(right())),
+      h("div.left", {
+        key: left,
+        styles: { width: size + "px" }
+      }, left()),
+      h("div.right", {
+        key: right,
+        styles: { left: (size + 5) + "px" }
+      }, right()),
       h("div.resizer", {
         styles:{left:size + "px"},
         onmousedown: onStart,

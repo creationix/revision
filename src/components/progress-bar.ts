@@ -1,9 +1,9 @@
 import { h, VNode } from "../libs/maquette"
 import { projector, style } from "../libs/router"
 
-interface ProgressBar{
+export interface ProgressBar{
   (): VNode
-  update: (done: number, total: number) => void
+  update: (done: number, total?: number) => void
 }
 
 export function ProgressBar(message: string) {
@@ -15,8 +15,9 @@ export function ProgressBar(message: string) {
   return progress;
 
   function update(newDone, newTotal) {
-    done = newDone;
-    total = newTotal;
+    if (typeof newTotal === 'number') done = newDone, total = newTotal;
+    else if (newDone > 0) total += newDone;
+    else if (newDone < 0) done -= newDone;
     projector.scheduleRender();
   }
 

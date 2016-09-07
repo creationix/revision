@@ -40,7 +40,7 @@ route("github/auth", function githubAuth() {
 route("github/token/:token", function githubStoreToken(params: { token: string}) {
   document.title = 'Storing GitHub Token - Revision Studio';
   localStorage.setItem("GITHUB_ACCESS_TOKEN", params.token);
-  restore();
+  return restore();
 });
 
 route("github/import", function githubImportForm() {

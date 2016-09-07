@@ -4,7 +4,7 @@ import { projector, style } from "../libs/router";
 import { loadCommit, loadTree } from "../libs/link";
 import { commitMode, treeMode, blobMode, execMode, symMode } from "../libs/git-codec"
 
-interface TreeView {
+export interface TreeView {
   (): VNode,
   onclick? : (evt: MouseEvent, entry) => void,
   oncontextmenu? : (evt: PointerEvent, entry) => void,

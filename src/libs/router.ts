@@ -52,12 +52,14 @@ export function go(path: string, preserve?: string|boolean) {
     localStorage.setItem("ROUTE_BOOKMARK", preserve as string);
   }
   location.hash = path;
+  return true
 }
 
 export function restore() {
   let path = localStorage.getItem("ROUTE_BOOKMARK") || '';
   localStorage.removeItem("ROUTE_BOOKMARK");
   location.hash = path;
+  return true
 }
 
 let styles = [];

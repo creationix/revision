@@ -6,7 +6,7 @@ import { guess } from "../libs/mime";
 
 let entries = {};
 
-interface TextEdit {
+export interface TextEdit {
   (): VNode
   set: (any) => void
 }

@@ -1,9 +1,10 @@
 import { page } from "./components/page"
-import { route } from "./libs/router";
+import { route, projector } from "./libs/router";
 import { h } from "./libs/maquette"
 import { TreeView } from "./components/tree-view"
 import { SplitView } from "./components/split-view"
 import { TextEdit } from "./components/text-edit"
+import { ProgressBar } from "./components/progress-bar"
 import { isUTF8 } from "./libs/bintools"
 
 // Use IndexedDB for storage
@@ -12,8 +13,7 @@ import "./libs/cas-idb"
 // Include github import ability.
 import "./github"
 
-// Include server-sync ability
-import "./sync"
+let serverUrl = (""+document.location.origin + "/").replace(/^http/, 'ws');
 
 route("", function () {
   document.title = `Revision Studio`;
@@ -28,12 +28,55 @@ route(":name/:hash", function (params: {name:string, hash: string}) {
   if (!/^[0-9a-f]{40}$/.test(params.hash)) return false;
 
   document.title = `${params.name} - Revision Studio`;
-  let tree = TreeView(params.name, params.hash);
-  tree.onclick = onClick
-  tree.oncontextmenu = onMenu;
-  let editor = TextEdit();
-  let split = SplitView(tree, editor, 200);
-  return split;
+
+  let progress: ProgressBar,
+      split: SplitView,
+      editor: TextEdit,
+      tree: TreeView;
+
+  download()
+  edit()
+
+  return function () {
+    return h('revison-studio', progress ? progress() : split());
+  }
+
+  function download() {
+    progress = ProgressBar(`Syncing Down ${params.hash}`);
+    projector.scheduleRender();
+    var worker = new Worker("download-worker.js");
+    worker.postMessage({ url: serverUrl, hash: params.hash });
+    worker.onmessage = function (evt) {
+      if (typeof evt.data === 'number') {
+        progress.update(evt.data);
+      }
+      progress = null;
+      projector.scheduleRender();
+    };
+  }
+
+  function upload() {
+    progress = ProgressBar(`Syncing Up ${params.hash}`);
+    projector.scheduleRender();
+    var worker = new Worker("upload-worker.js");
+    worker.postMessage({ url: serverUrl, hash: params.hash });
+    worker.onmessage = function (evt) {
+      if (typeof evt.data === 'number') {
+        progress.update(evt.data);
+      }
+      progress = null;
+      projector.scheduleRender();
+    };
+  }
+
+  function edit() {
+    tree = TreeView(params.name, params.hash);
+    tree.onclick = onClick
+    tree.oncontextmenu = onMenu;
+    editor = TextEdit();
+    split = SplitView(tree, editor, 200);
+    projector.scheduleRender();
+  }
 
   function onClick(evt, entry) {
     if (entry.type === "file") {
