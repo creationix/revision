@@ -9,7 +9,7 @@ export function sha1Stream() {
   return create(false);
 }
 // Input chunks must be either arrays of bytes or "raw" encoded strings
-export function sha1(buffer : Uint8Array) : string {
+export function sha1(buffer : Uint8Array | string) : string {
   let shasum = create(true);
   shasum.update(buffer);
   return shasum.digest();
