@@ -1,8 +1,8 @@
 import { h, VNode } from "../libs/maquette"
 import { guess } from "../libs/mime";
 import { projector, style } from "../libs/router";
-import { loadCommit, loadTree } from "../libs/link";
-import { commitMode, treeMode, blobMode, execMode, symMode } from "../libs/git-codec"
+import { loadTree } from "../libs/link";
+import { treeMode, blobMode, execMode, symMode } from "../libs/git-codec"
 
 export interface TreeView {
   (): VNode,
@@ -12,7 +12,7 @@ export interface TreeView {
 export function TreeView(rootName, rootHash) {
   let root = {
     name: rootName,
-    mode: commitMode,
+    mode: treeMode,
     hash: rootHash
   };
   let data = localStorage.getItem("OPEN_DIRS");
@@ -60,7 +60,6 @@ export function TreeView(rootName, rootHash) {
 
   function renderNode(path, node) {
     switch(node.mode) {
-      case commitMode: return renderTree(path, node, true);
       case treeMode: return renderTree(path, node);
       case blobMode: return renderFile(path, node);
       case execMode: return renderFile(path, node, true);
@@ -81,10 +80,10 @@ export function TreeView(rootName, rootHash) {
     else if (!children) {
       (async function() {
         let hash = value.hash;
-        if (isCommit) {
-          value.commit = await loadCommit(hash);
-          hash = value.hash = value.commit.tree;
-        }
+        // if (isCommit) {
+        //   value.commit = await loadCommit(hash);
+        //   hash = value.hash = value.commit.tree;
+        // }
         let tree = await loadTree(hash);
         return tree;
       }()).then(tree => {
