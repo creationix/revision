@@ -126,7 +126,7 @@ export function applyDelata(base, delta) {
 
 }
 
-export function treeSort(a, b) {
+export function treeSort(a: GitEntry, b: GitEntry): number {
   let modes = getModes();
   var aa = (a.mode === modes.tree) ? a.name + "/" : a.name;
   var bb = (b.mode === modes.tree) ? b.name + "/" : b.name;
@@ -138,7 +138,7 @@ function safe(string) {
   return string.replace(/(?:^[\.,:;<>"']+|[\0\n<>]+|[\.,:;<>"']+$)/gm, "");
 }
 
-export function encodeBlob(body) {
+export function encodeBlob(body: GitBlob): Uint8Array {
   if (typeof body === "string") body = strToBin(body);
   if (!isBin(body)) {
     throw new TypeError("Blobs must be binary values");
@@ -156,7 +156,7 @@ export function treeMap(key) {
   };
 }
 
-export function encodeTree(body) {
+export function encodeTree(body: GitTree): Uint8Array {
   var tree = [];
   if (!Array.isArray(body)) {
     throw new TypeError("Tree must be in array form");
@@ -169,7 +169,7 @@ export function encodeTree(body) {
   return flatten(tree);
 }
 
-export function encodeTag(body) {
+export function encodeTag(body: GitTag): Uint8Array {
   var str = "object " + body.object +
     "\ntype " + body.type +
     "\ntag " + body.tag +
@@ -178,7 +178,7 @@ export function encodeTag(body) {
   return strToBin(str);
 }
 
-export function encodeCommit(body) {
+export function encodeCommit(body: GitCommit): Uint8Array {
   var str = "tree " + body.tree;
   for (var i = 0, l = body.parents.length; i < l; ++i) {
     str += "\nparent " + body.parents[i];
@@ -314,31 +314,31 @@ function decodePerson(string) {
   };
 }
 
-export function deframeAny(buffer) {
+export function deframeAny(buffer: Uint8Array): GitTag | GitCommit | GitTree | Uint8Array {
   let out = deframePlain(buffer);
   out[1] = getDecoders()[out[0]](out[1]);
   return out;
 }
 
-export function deframeBlob(buffer) {
+export function deframeBlob(buffer: Uint8Array): Uint8Array {
   let out = deframePlain(buffer);
   if (out[0] !== 'blob') throw new TypeError("Buffer is not a blob");
   return out[1];
 }
 
-export function deframeTree(buffer) {
+export function deframeTree(buffer: Uint8Array): GitTree {
   let out = deframePlain(buffer);
   if (out[0] !== 'tree') throw new TypeError("Buffer is not a tree");
   return decodeTree(out[1]);
 }
 
-export function deframeCommit(buffer) {
+export function deframeCommit(buffer: Uint8Array): GitCommit {
   let out = deframePlain(buffer);
   if (out[0] !== 'commit') throw new TypeError("Buffer is not a commit");
   return decodeCommit(out[1]);
 }
 
-export function deframeTag(buffer) {
+export function deframeTag(buffer: Uint8Array): GitTag {
   let out = deframePlain(buffer);
   if (out[0] !== 'tag') throw new TypeError("Buffer is not a tag");
   return decodeTag(out[1]);
@@ -360,23 +360,23 @@ export function frameAny(type, body) {
   return framePlain(type, getEncoders()[type](body));
 }
 
-export function frameBlob(body) {
+export function frameBlob(body: GitBlob) {
   return framePlain("blob", encodeBlob(body));
 }
 
-export function frameTree(body) {
+export function frameTree(body: GitTree) {
   return framePlain("tree", encodeTree(body));
 }
 
-export function frameCommit(body) {
+export function frameCommit(body: GitCommit) {
   return framePlain("commit", encodeCommit(body));
 }
 
-export function frameTag(body) {
+export function frameTag(body: GitTag) {
   return framePlain("tag", encodeTag(body));
 }
 
-export function framePlain(type, body) {
+export function framePlain(type: string, body: Uint8Array): Uint8Array {
   return flatten([
     type + " " + body.length + "\0",
     body

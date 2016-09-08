@@ -16,7 +16,7 @@ export function sha1(buffer : Uint8Array | string) : string {
 }
 
 // A pure JS implementation of sha1 for non-node environments.
-function create(sync : Boolean) : ShaSum {
+function create(sync : boolean) : ShaSum {
   let h0 = 0x67452301;
   let h1 = 0xEFCDAB89;
   let h2 = 0x98BADCFE;

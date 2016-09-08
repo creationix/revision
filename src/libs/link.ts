@@ -9,7 +9,7 @@ import {
 interface Storage {
   get?: (hash : string) => Promise<Uint8Array>,
   set?: (hash : string, value: Uint8Array) => Promise<void>,
-  has?: (hash : string) => Promise<Boolean>,
+  has?: (hash : string) => Promise<boolean>,
   clear?: () => Promise<void>
 }
 // Consumers of this API must provide the following interface here.
@@ -17,41 +17,41 @@ interface Storage {
 // function set(hash, value) -> promise
 export let storage : Storage  = {} as Storage
 
-export async function saveBlob(value) {
+export async function saveBlob(value: GitBlob) {
   let buf = frameBlob(value);
   let hex = sha1(buf);
   await storage.set(hex, buf);
   return hex;
 }
 
-export async function saveTree(value) {
+export async function saveTree(value: GitTree) {
   let buf = frameTree(value);
   let hex = sha1(buf);
   await storage.set(hex, buf);
   return hex;
 }
 
-export async function saveCommit(value) {
+export async function saveCommit(value: GitCommit) {
   let buf = frameCommit(value);
   let hex = sha1(buf);
   await storage.set(hex, buf);
   return hex;
 }
 
-export async function loadBlob(hex) {
+export async function loadBlob(hex: string) {
   return deframeBlob(await storage.get(hex));
 }
 
-export async function loadTree(hex) {
+export async function loadTree(hex: string) {
   return deframeTree(await storage.get(hex));
 }
 
-export async function loadCommit(hex) {
+export async function loadCommit(hex: string) {
   return deframeCommit(await storage.get(hex));
 }
 
-export async function exists(hex) {
-  return await storage.has(hex);
+export async function exists(hex: string): Promise<boolean> {
+  return storage.has(hex);
 }
 
 // Look for links in an object

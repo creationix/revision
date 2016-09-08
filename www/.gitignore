@@ -1,5 +1,5 @@
-worker.js
-worker.js.map
+service-worker.js
+service-worker.js.map
 github-worker.js
 github-worker.js.map
 main.js

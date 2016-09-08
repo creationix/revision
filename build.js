@@ -28,16 +28,17 @@ var configs = [
     format: 'iife',
     plugins: [typescript(tsOptions)],
     sourceMap: true },
+  { entry: 'src/service-worker.ts',
+    dest: 'www/service-worker.js',
+    format: 'iife',
+    plugins: [typescript(tsOptions)],
+    sourceMap: true },
   { entry: 'src/server.ts',
     dest: 'server.js',
     format: 'cjs',
     plugins: [typescript(tsOptions)],
     globals: ["net","https","url","fs"],
-    sourceMap: false },
-  // { entry: 'CodeMirror/lib/codemirror.js',
-  //   dest: 'www/codemirror.js',
-  //   format: 'iife',
-  //   sourceMap: true }
+    sourceMap: false }
 ];
 
 configs.forEach(config => {
