@@ -19,7 +19,7 @@ new Server()
 
   // Serve up the sync protocol over websocket
   .use(websocket(async function (req, read, write) {
-    await serve(read, write);
+    await serve(read, write).catch(console.error);
   }))
 
   // When the browser wants to authenticate with github, it only needs to

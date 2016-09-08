@@ -1,5 +1,5 @@
 import { storage, scanTree } from "./link"
-import { decode } from "./msgpack"
+import { deframePlain, decodeTree } from "./git-codec"
 import { sha1 } from "./sha1"
 
 function empty(obj) {
@@ -9,6 +9,7 @@ function empty(obj) {
 
 export async function serve(read , write) {
   let message;
+  let inspect = require('util').inspect
   while ((message = await read())) {
     if (typeof message === "string") {
       let match = message.match(/^(.):([0-9a-f]{40})$/);
@@ -28,8 +29,13 @@ export async function serve(read , write) {
         continue;
       }
     }
-    throw new Error("Unexpected Message: " + message);
+    console.error("Unexpected Message: " + inspect(message));
   }
+}
+
+function decode(bin: Uint8Array): GitTree | Uint8Array {
+  let [type, data] = deframePlain(bin);
+  return (type === "tree") ? decodeTree(data) : data
 }
 
 // The goal of this function is to download a hash and all it's children
@@ -64,8 +70,7 @@ export async function receive(rootHash, read, write, onUpdate?) : Promise<string
       // If we already have the hash locally, load it and scan for child hashes.
       let bin = await storage.get(hash)
       if (bin) {
-        let obj = decode(bin);
-        enqueue(obj);
+        enqueue(decode(bin));
         continue;
       }
 
@@ -79,7 +84,6 @@ export async function receive(rootHash, read, write, onUpdate?) : Promise<string
 
     let message = await read();
     if (!message) throw new Error("Connection closed while waiting for hashes");
-
     if (typeof message === "string") {
       let match = message.match(/^(.):([0-9a-f]{40})$/);
       if (!match) {
@@ -108,9 +112,8 @@ export async function receive(rootHash, read, write, onUpdate?) : Promise<string
     }
 
     // Try to decode the message
-    let obj = decode(message);
     // And queue up any child hashes
-    enqueue(obj);
+    enqueue(decode(message));
 
     // Save the blob.
     await storage.set(hash, message);
@@ -125,9 +128,7 @@ export async function receive(rootHash, read, write, onUpdate?) : Promise<string
 
   function enqueue(obj) {
     if (!Array.isArray(obj)) return;
-    for (let link of scanTree(obj)) {
-      queue.push(link.toHex());
-    }
+    queue.push.apply(queue, scanTree(obj));
   }
 
 }

@@ -1,7 +1,7 @@
 /// <reference path="typings/lib.webworker.d.ts"/>
 /// <reference path="typings/whatwg-fetch.d.ts"/>
 import { binToStr } from "./libs/bintools"
-import { saveCommit, saveTree, saveBlob } from "./libs/link"
+import { saveTree, saveBlob } from "./libs/link"
 import { frameCommit } from "./libs/git-codec"
 import { sha1 } from "./libs/sha1"
 import "./libs/cas-idb"

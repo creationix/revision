@@ -43,26 +43,29 @@ route(":name/:hash", function (params: {name:string, hash: string}) {
 
   function download() {
     progress = ProgressBar(`Syncing Down ${params.hash}`);
+    let update = progress.update
     projector.scheduleRender();
     var worker = new Worker("download-worker.js");
     worker.postMessage({ url: serverUrl, hash: params.hash });
     worker.onmessage = function (evt) {
       if (typeof evt.data === 'number') {
-        progress.update(evt.data);
+        update(evt.data);
       }
       progress = null;
       projector.scheduleRender();
+      upload();
     };
   }
 
   function upload() {
     progress = ProgressBar(`Syncing Up ${params.hash}`);
+    let update = progress.update
     projector.scheduleRender();
     var worker = new Worker("upload-worker.js");
     worker.postMessage({ url: serverUrl, hash: params.hash });
     worker.onmessage = function (evt) {
       if (typeof evt.data === 'number') {
-        progress.update(evt.data);
+        update(evt.data);
       }
       progress = null;
       projector.scheduleRender();

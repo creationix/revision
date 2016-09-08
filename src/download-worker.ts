@@ -12,7 +12,14 @@ onmessage = function(evt) {
 };
 
 async function download(url, rootHash) {
-  let ws = await connect(url);
-  let missing = await receive(rootHash, ws.read, ws.write, postMessage);
+  let ws;
+  let missing = await receive(rootHash, read, write, postMessage);
   return missing;
+  async function read() {
+    return ws.read()
+  }
+  async function write(data) {
+    ws = ws || await connect(url);
+    return ws.write(data)
+  }
 }
