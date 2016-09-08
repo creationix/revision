@@ -387,7 +387,7 @@ declare namespace NodeJS {
     export interface Global {
         Array: typeof Array;
         ArrayBuffer: typeof ArrayBuffer;
-        Boolean: typeof Boolean;
+        boolean: typeof boolean;
         Buffer: typeof Buffer;
         DataView: typeof DataView;
         Date: typeof Date;
@@ -2364,7 +2364,7 @@ declare module "util" {
     export function isError(object: any): boolean;
     export function inherits(constructor: any, superConstructor: any): void;
     export function debuglog(key: string): (msg: string, ...param: any[]) => void;
-    export function isBoolean(object: any): boolean;
+    export function isboolean(object: any): boolean;
     export function isBuffer(object: any): boolean;
     export function isFunction(object: any): boolean;
     export function isNull(object: any): boolean;

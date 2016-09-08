@@ -20,7 +20,7 @@ export function addInspect() {
 //   hex - a string holding binary data as lowercase hexadecimal.
 //   b64 - a string holding binary data in base64 encoding.
 
-export function isBin(bin : any) : Boolean {
+export function isBin(bin : any) : boolean {
   return bin instanceof Uint8Array
 }
 
@@ -313,7 +313,7 @@ export function uint64(value : number) : number[][] {
 // If the first 4 bit is 1110,that character is 3 byte width and this is the first byte
 // If the first 5 bit is 11110,that character is 4 byte width and this is the first byte
 // If the first 6 bit is 111110,that character is 5 byte width and this is the first byte
-export function isUTF8(bin : Uint8Array) : Boolean {
+export function isUTF8(bin : Uint8Array) : boolean {
   let i = 0, l = bin.length
   while (i < l) {
     if (bin[i] < 0x80) i++

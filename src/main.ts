@@ -15,6 +15,8 @@ import "./github"
 
 let serverUrl = (""+document.location.origin + "/").replace(/^http/, 'ws');
 
+navigator.serviceWorker.register("service-worker.js")
+
 route("", function () {
   document.title = `Revision Studio`;
 
