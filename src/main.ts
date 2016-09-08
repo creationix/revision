@@ -1,6 +1,6 @@
 import { page } from "./components/page"
-import { route, projector } from "./libs/router";
-import { h } from "./libs/maquette"
+import { route, projector, style } from "./libs/router";
+import { h, VNode } from "./libs/maquette"
 import { TreeView } from "./components/tree-view"
 import { SplitView } from "./components/split-view"
 import { TextEdit } from "./components/text-edit"
@@ -32,14 +32,19 @@ route(":name/:hash", function (params: {name:string, hash: string}) {
   let progress: ProgressBar,
       split: SplitView,
       editor: TextEdit,
-      tree: TreeView;
+      tree: TreeView,
+      sync: VNode;
 
   download()
-  edit()
 
   return function () {
-    return h('revison-studio', progress ? progress() : split());
+    return h('revison-studio', [
+      progress && progress(),
+      split && split(),
+      sync
+    ].filter(Boolean));
   }
+
 
   function download() {
     progress = ProgressBar(`Syncing Down ${params.hash}`);
@@ -51,9 +56,9 @@ route(":name/:hash", function (params: {name:string, hash: string}) {
       if (typeof evt.data === 'number') {
         update(evt.data);
       }
+      edit();
       progress = null;
       projector.scheduleRender();
-      // upload();
     };
   }
 
@@ -78,6 +83,7 @@ route(":name/:hash", function (params: {name:string, hash: string}) {
     tree.oncontextmenu = onMenu;
     editor = TextEdit();
     split = SplitView(tree, editor, 200);
+    sync = h("button.sync.pure-button", {onclick:upload}, "Sync");
     projector.scheduleRender();
   }
 
@@ -97,3 +103,15 @@ route(":name/:hash", function (params: {name:string, hash: string}) {
 });
 
 import { loadCommit, loadTree, loadBlob } from "./libs/link"
+
+style(`
+button.sync {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  opacity: 0.5;
+}
+button.sync:hover {
+  opacity: 1.0;
+}
+`)
