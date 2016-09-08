@@ -117,7 +117,7 @@ export function encodeRaw(item) {
 
   let payload = flatten(item.payload);
   let len = payload.length;
-  let head = [
+  let head: any[] = [
     ((item.hasOwnProperty("fin") ? item.fin : true) ? 0x80 : 0) |
     (item.hasOwnProperty("opcode") ? item.opcode & 0xf : 2),
     (item.mask ? 0x80 : 0) |
