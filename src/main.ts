@@ -89,7 +89,9 @@ route(":name/:hash", function (params: {name:string, hash: string}) {
     projector.scheduleRender();
   }
 
-  function onClick(evt, entry) {
+  function onClick(evt: MouseEvent, entry) {
+    if (evt.altKey || evt.metaKey || evt.ctrlKey || evt.shiftKey) return;
+    evt.preventDefault();
     if (entry.type === "file") {
       editor.set(entry);
     }
@@ -98,7 +100,7 @@ route(":name/:hash", function (params: {name:string, hash: string}) {
     }
   }
   function onMenu(evt, entry) {
-    evt.preventDefault();
+    // evt.preventDefault();
     console.log("contextmenu", evt, entry);
   }
 

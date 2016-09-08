@@ -97,7 +97,8 @@ export function TreeView(rootName, rootHash) {
 
     }
     return h("li", {key:path}, [
-      h('div.row', {
+      h('a.row', {
+        href: `/${rootName}/${rootHash}/${path.substr(rootName.length + 1)}`,
         title: value.hash,
         classes: {
           "icon-down-dir": open,
@@ -120,7 +121,8 @@ export function TreeView(rootName, rootHash) {
     let mime = guess(path);
     let icon = exec ? "icon-cog" : guessIcon(mime);
     return h('li', {key:path}, [
-      h('div.row', {
+      h('a.row', {
+        href: `/${rootName}/${rootHash}/${path.substr(rootName.length + 1)}`,
         title: value.hash,
         'data-type': 'file',
         'data-mode': value.mode,
@@ -137,7 +139,8 @@ export function TreeView(rootName, rootHash) {
   function renderSym(path: string, value: any): VNode {
     let mime = guess(path);
     return h("li", {key: path}, [
-      h("div.row", {
+      h("a.row", {
+        href: `/${rootName}/${rootHash}/${path.substr(rootName.length + 1)}`,
         title: value.hash,
         'data-type': 'link',
         'data-mode': value.mode,
@@ -191,6 +194,7 @@ tree-view .row [data-dirty] {
   font-weight: bold;
 }
 tree-view .row {
+  text-decoration: none;
   display: block;
   white-space: nowrap;
   line-height: 2em;
@@ -205,8 +209,11 @@ tree-view .row.icon-down-dir,
 tree-view .row.icon-right-dir {
   margin-left: -1017px;
 }
-tree-view .row:hover {
+tree-view .row:hover, tree-view .row:active {
   background-color: rgb(50,50,50);
+}
+tree-view .row, tree-view .row:visited, tree-view .row:active {
+  color: inherit;
 }
 tree-view span[class^="icon-"]::before {
   font-size: 1.2em;
