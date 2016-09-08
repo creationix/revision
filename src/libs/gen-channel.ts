@@ -81,7 +81,7 @@ export function makeRead(socket, decode) : Read {
   }
 
   function onValue(value) {
-    console.log("<-", value);
+    // console.log("<-", value);
     // If there is a pending writer, give it the data right away.
     if (reader > writer) {
       queue[writer++](value);
@@ -102,7 +102,7 @@ export function makeRead(socket, decode) : Read {
 export function makeWrite(socket, encode) {
 
   let write = function write(value) {
-    console.log("->", value);
+    // console.log("->", value);
     if (encode) value = encode(value);
     return new Promise((resolve, reject) => {
       if (value) socket.write(new Buffer(value), check);

@@ -2,12 +2,22 @@ import { storage, scanTree } from "./link"
 import { deframePlain, decodeTree } from "./git-codec"
 import { sha1 } from "./sha1"
 
+interface Read {
+  (): Promise<Uint8Array | string | void>
+}
+interface Write {
+  (data?: Uint8Array | string): void
+}
+interface Update {
+  (delta: number): void
+}
+
 function empty(obj) {
   for (let key in obj) return !key;
   return true;
 }
 
-export async function serve(read , write) {
+export async function serve(read: Read, write: Write) {
   let message;
   let inspect = require('util').inspect
   while ((message = await read())) {
@@ -25,7 +35,7 @@ export async function serve(read , write) {
         continue;
       }
       if (command === "w") {
-        process(hash, read, write).catch(console.error);
+        process(hash, write).catch(console.error);
         continue;
       }
     }
@@ -45,7 +55,7 @@ function decode(bin: Uint8Array): GitTree | Uint8Array {
 // socket, usually over websockets. `onUpdate(delta)` is an optional parameter
 // to get update notifications for powering progress bars.  The local `storage`
 // is imported from the environment.
-export async function receive(rootHash, read, write, onUpdate?) : Promise<string[]> {
+export async function receive(rootHash: string, read: Read, write: Write, onUpdate?: Update) : Promise<string[]> {
 
   // Map of hashes we've already seen to avoid sending duplicate requests.
   let seen = {};
@@ -133,7 +143,7 @@ export async function receive(rootHash, read, write, onUpdate?) : Promise<string
 
 }
 
-export async function send(rootHash, read, write, onUpdate?) : Promise<string[]> {
+export async function send(rootHash: string, read: Read, write: Write, onUpdate?: Update) : Promise<string[]> {
   await write("s:" + rootHash);
   let missing = [];
 
@@ -164,7 +174,7 @@ export async function send(rootHash, read, write, onUpdate?) : Promise<string[]>
   return missing;
 }
 
-async function process(hash, write, missing, onUpdate?) {
+async function process(hash: string, write: Write, missing?: string[], onUpdate?: Update) {
   if (await storage.has(hash)) {
     if (onUpdate) onUpdate(1);
     let bin = await storage.get(hash);

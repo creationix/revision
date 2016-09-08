@@ -30,10 +30,13 @@ function applyMask(data, mask) {
 }
 
 export function decode(chunk) {
-  let out = decodeRaw(chunk);
-  if (!out) return;
-  out[0] = out[0].payload;
-  return out;
+  let out;
+  while ((out = decodeRaw(chunk))) {
+    let [frame, extra] = out;
+    if (frame.opcode === 1 || frame.opcode === 2) return [frame.payload, extra];
+    if (!extra) return;
+    chunk = extra;
+  }
 }
 
 export function decodeRaw(chunk) {

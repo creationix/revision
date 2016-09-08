@@ -53,7 +53,7 @@ route(":name/:hash", function (params: {name:string, hash: string}) {
       }
       progress = null;
       projector.scheduleRender();
-      upload();
+      // upload();
     };
   }
 
