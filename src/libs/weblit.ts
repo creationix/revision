@@ -199,6 +199,7 @@ export class Server {
         read.updateDecode(decode);
         write.updateEncode(encode);
         await res.upgrade(req, read, write);
+        break;
       }
 
       if (res.body) write(flatten(res.body));
