@@ -64,8 +64,14 @@ new Server()
     method: "GET",
     path: "/:name/:hash/:path:"
   }, async function (req, res, next) {
+
+    // Only match routes where hash looks like a hash.
     if (!(/^[0-9a-f]{40}$/.test(req.params.hash))) return next();
+
+    // Run the shared server logic using objects stored in local redis.
     let result = await serve(req.params.name, req.params.hash, req.params.path);
+
+    // Convert the result to a weblit-js response
     if (result.status === 404) return next();
     res.code = result.status || 200;
     for (let key in result.headers) {

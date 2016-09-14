@@ -15,7 +15,17 @@ import "./github"
 
 let serverUrl = (""+document.location.origin + "/").replace(/^http/, 'ws');
 
-navigator.serviceWorker.register("service-worker.js")
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js')
+  .then(function(reg) {
+    // registration worked
+    console.log('Registration succeeded. Scope is ' + reg.scope);
+  }).catch(function(error) {
+    // registration failed
+    console.log('Registration failed with ' + error);
+  });
+}
+
 
 route("", function () {
   document.title = `Revision Studio`;

@@ -50,6 +50,10 @@ self.addEventListener('fetch', function (event) {
 });
 
 async function passthrough(event) {
+  // if (!navigator.onLine) {
+  //   console.log("Ignoring cache", event.request);
+  //   return fetch(event.request);
+  // }
   let cache = await cacheStorage.open(CACHE_NAME);
   let response = await cache.match(event.request);
   if (!response) {
