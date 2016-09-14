@@ -91,12 +91,9 @@ route(":name/:hash", function (params: {name:string, hash: string}) {
 
   function onClick(evt: MouseEvent, entry) {
     if (evt.altKey || evt.metaKey || evt.ctrlKey || evt.shiftKey) return;
-    evt.preventDefault();
     if (entry.type === "file") {
+      evt.preventDefault();
       editor.set(entry);
-    }
-    else {
-      console.log("click", evt, entry);
     }
   }
   function onMenu(evt, entry) {

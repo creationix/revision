@@ -1,13 +1,11 @@
-/// <reference path="typings/lib.webworker.d.ts"/>
-import { guess } from "./libs/mime";
-import { pathJoin } from "./libs/pathjoin";
-import { loadTree, loadBlob } from "./libs/link"
-import { isUTF8, binToStr } from "./libs/bintools"
-import { treeMode, blobMode, symMode, execMode } from "./libs/git-codec"
+/// <reference path="./typings/service_worker_api.d.ts"/>
+import { serve } from "./libs/serve"
 import "./libs/cas-idb"
 
 const CACHE_NAME = 'v1';
 const routePattern = /^https?:\/\/[^\/]+\/([^\/]+)\/([0-9a-f]{40})(\/?.*)$/;
+
+let cacheStorage : CacheStorage = self.caches;
 
 function wrap(fn) {
   return function (event) {
@@ -16,7 +14,8 @@ function wrap(fn) {
 }
 
 self.addEventListener('install', wrap(async function () {
-  let cache = await caches.open(CACHE_NAME);
+
+  let cache = await cacheStorage.open(CACHE_NAME);
   await cache.addAll([
     '/',
     '/main.js',
@@ -29,7 +28,6 @@ self.addEventListener('install', wrap(async function () {
     "/css/style.css",
     "/css/revision-icons.css",
     "/css/dark-theme.css",
-
   ]);
   await self.skipWaiting();
 }));
@@ -46,12 +44,13 @@ self.addEventListener('fetch', function (event) {
     let name = match[1],
         hash = match[2],
         path = match[3];
-    return await serve(name, hash, path);
+    let res = await serve(name, hash, path);
+    return new Response(res.body, res);
   }());
 });
 
 async function passthrough(event) {
-  let cache = await caches.open(CACHE_NAME);
+  let cache = await cacheStorage.open(CACHE_NAME);
   let response = await cache.match(event.request);
   if (!response) {
     response = await fetch(event.request.clone());
@@ -61,82 +60,4 @@ async function passthrough(event) {
     }
   }
   return response;
-}
-
-async function serve(rootName: string, rootHash: string, path: string) {
-  let entry = {
-    name: rootName,
-    mode: treeMode,
-    hash: rootHash
-  };
-  outer: for (let part of path.split('/')) {
-    if (entry.mode === treeMode) {
-      if (!part) continue outer
-      for (let child of await loadTree(entry.hash)) {
-        if (child.name === part) {
-          entry = child
-          continue outer
-        }
-      }
-      return new Response(`No such entry: ${part}\n`, { status: 404});
-    }
-    return new Response(`Not a directory: ${entry.name}\n`, { status: 404});
-  }
-
-  if (entry.mode === treeMode) {
-    if (path[path.length - 1] !== "/") {
-      // redirect to add slash
-      return new Response("Redirecting...\n", {
-        status: 302,
-        headers: {
-          Location: `/${rootName}/${rootHash}${path}/`
-        }
-      });
-    }
-    let tree = await loadTree(entry.hash);
-
-    // Auto load index.html if found
-    for (let child of tree) {
-      if (child.name === "index.html" && child.mode !== treeMode) {
-        entry = child;
-        path = pathJoin(path, "index.html")
-        break;
-      }
-    }
-
-    // Render HTML directory for trees.
-    if (entry.mode === treeMode) {
-      let html = `<h1>${rootName} - ${path}</h1>`;
-      html += "<ul>";
-      for (let child of tree) {
-        let newPath = pathJoin(path, child.name);
-        if (child.mode === treeMode) newPath += "/";
-        let href = `/${rootName}/${rootHash}${newPath}`;
-        html += `<li><a href="${href}">${child.name}</a></li>`;
-      }
-      html += "</ul>";
-      return new Response(html, {
-        headers: { 'Content-Type': 'text/html' }
-      });
-    }
-  }
-
-  // Resolve symlinks by redirecting internally to target.
-  if (entry.mode === symMode) {
-    let target = binToStr(await loadBlob(entry.hash))
-    return serve(rootName, rootHash, pathJoin(path, "..", target));
-  }
-
-  // Serve files as static content
-  // TODO: later we can execute files with exec bit set for virtual server code
-  if (entry.mode === blobMode || entry.mode == execMode) {
-    let body = await loadBlob(entry.hash)
-    return new Response(body, {
-      headers: {
-        'Content-Type': guess(path, ()=>isUTF8(body)),
-        'Content-Disposition': `inline; filename="${entry.name}"`
-      }
-    });
-  }
-
 }

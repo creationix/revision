@@ -45,6 +45,7 @@ export function TreeView(rootName, rootHash) {
       if (evt.defaultPrevented) return;
     }
     if (data.type === 'tree') {
+      evt.preventDefault();
       openDirs[data.path] = !openDirs[data.path];
       localStorage.setItem("OPEN_DIRS", JSON.stringify(openDirs));
       projector.scheduleRender();

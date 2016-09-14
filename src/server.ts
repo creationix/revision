@@ -2,7 +2,8 @@
 import { addInspect } from "./libs/bintools"; addInspect();
 import { Server, autoHeaders, logger, files, websocket, request } from "./libs/weblit";
 import { binToStr } from "./libs/bintools";
-import { serve } from "./libs/sync-protocol"
+import { serve as syncServe } from "./libs/sync-protocol"
+import { serve } from "./libs/serve"
 
 import "./libs/cas-redis";
 
@@ -19,7 +20,7 @@ new Server()
 
   // Serve up the sync protocol over websocket
   .use(websocket(async function (req, read, write) {
-    await serve(read, write).catch(console.error);
+    await syncServe(read, write).catch(console.error);
   }))
 
   // When the browser wants to authenticate with github, it only needs to
@@ -58,5 +59,19 @@ new Server()
   })
 
   .use(files("www"))  // To serve up the client-side app
+
+  .route({
+    method: "GET",
+    path: "/:name/:hash/:path:"
+  }, async function (req, res, next) {
+    if (!(/^[0-9a-f]{40}$/.test(req.params.hash))) return next();
+    let result = await serve(req.params.name, req.params.hash, req.params.path);
+    if (result.status === 404) return next();
+    res.code = result.status || 200;
+    for (let key in result.headers) {
+      res.headers.set(key, result.headers[key]);
+    }
+    if (result.body) res.body = result.body;
+  })
 
   .start();
