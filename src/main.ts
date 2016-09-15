@@ -67,6 +67,7 @@ route(":name/:hash", function (params: {name:string, hash: string}) {
     worker.onmessage = function (evt) {
       if (typeof evt.data === 'number') {
         update(evt.data);
+        return;
       }
       edit();
       progress = null;
@@ -83,6 +84,7 @@ route(":name/:hash", function (params: {name:string, hash: string}) {
     worker.onmessage = function (evt) {
       if (typeof evt.data === 'number') {
         update(evt.data);
+        return;
       }
       progress = null;
       projector.scheduleRender();
