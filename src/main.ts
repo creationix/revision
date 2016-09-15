@@ -6,6 +6,7 @@ import { SplitView } from "./components/split-view"
 import { TextEdit } from "./components/text-edit"
 import { ProgressBar } from "./components/progress-bar"
 import { isUTF8 } from "./libs/bintools"
+import { aliases } from "./libs/aliases"
 
 // Use IndexedDB for storage
 import "./libs/cas-idb"
@@ -29,17 +30,51 @@ if ('serviceWorker' in navigator) {
 
 route("", function () {
   document.title = `Revision Studio`;
+  let keys = [];
+  aliases.keys().then(onKeys);
 
-  return page("Revison Studio", h("div.pure-u-1.pure-u-md-1-1", [
-    h('a.pure-button.pure-button-primary', {href:"#github/import"}, "Import from github")
-  ]));
+  return function () {
+    return page("Revison Studio", h("div.pure-u-1.pure-u-md-1-1", [
+      keys.map(key =>
+        h('a.pure-button', {key:key, href:"#" + key}, key)
+      ),
+      h('a.pure-button', {href:"#github/import"}, "Import from github")
+    ]))();
+  }
+
+  function onKeys(newKeys) {
+    keys = newKeys;
+    projector.scheduleRender();
+  }
 });
 
 route(":name/:hash", function (params: {name:string, hash: string}) {
   // Restrict the shape of the hash in the route match.
   if (!/^[0-9a-f]{40}$/.test(params.hash)) return false;
 
-  document.title = `${params.name} - Revision Studio`;
+  document.title = `Importing ${params.name} - Revision Studio`;
+
+  let progress = ProgressBar(`Syncing Down ${params.hash}`);
+  let update = progress.update
+  projector.scheduleRender();
+  var worker = new Worker("download-worker.js");
+  worker.postMessage({ url: serverUrl, hash: params.hash });
+  worker.onmessage = function (evt) {
+    if (typeof evt.data === 'number') {
+      update(evt.data);
+      return;
+    }
+    aliases.set(params.name, params.hash).then(() => {
+      document.location.hash = params.name;
+    })
+  };
+
+  return progress;
+});
+
+route(":name", function (params: {name:string}) {
+
+  document.title = `Editing ${params.name} - Revision Studio`;
 
   let progress: ProgressBar,
       split: SplitView,
@@ -47,7 +82,8 @@ route(":name/:hash", function (params: {name:string, hash: string}) {
       tree: TreeView,
       sync: VNode;
 
-  download()
+
+  edit();
 
   return function () {
     return h('revison-studio', [
@@ -57,47 +93,30 @@ route(":name/:hash", function (params: {name:string, hash: string}) {
     ].filter(Boolean));
   }
 
+  // function upload() {
+  //   progress = ProgressBar(`Syncing Up ${params.hash}`);
+  //   let update = progress.update
+  //   projector.scheduleRender();
+  //   var worker = new Worker("upload-worker.js");
+  //   worker.postMessage({ url: serverUrl, hash: params.hash });
+  //   worker.onmessage = function (evt) {
+  //     if (typeof evt.data === 'number') {
+  //       update(evt.data);
+  //       return;
+  //     }
+  //     progress = null;
+  //     projector.scheduleRender();
+  //   };
+  // }
 
-  function download() {
-    progress = ProgressBar(`Syncing Down ${params.hash}`);
-    let update = progress.update
-    projector.scheduleRender();
-    var worker = new Worker("download-worker.js");
-    worker.postMessage({ url: serverUrl, hash: params.hash });
-    worker.onmessage = function (evt) {
-      if (typeof evt.data === 'number') {
-        update(evt.data);
-        return;
-      }
-      edit();
-      progress = null;
-      projector.scheduleRender();
-    };
-  }
-
-  function upload() {
-    progress = ProgressBar(`Syncing Up ${params.hash}`);
-    let update = progress.update
-    projector.scheduleRender();
-    var worker = new Worker("upload-worker.js");
-    worker.postMessage({ url: serverUrl, hash: params.hash });
-    worker.onmessage = function (evt) {
-      if (typeof evt.data === 'number') {
-        update(evt.data);
-        return;
-      }
-      progress = null;
-      projector.scheduleRender();
-    };
-  }
-
-  function edit() {
-    tree = TreeView(params.name, params.hash);
+  async function edit() {
+    let rootHash = await aliases.get(params.name);
+    tree = TreeView(params.name, rootHash);
     tree.onclick = onClick
     tree.oncontextmenu = onMenu;
     editor = TextEdit();
     split = SplitView(tree, editor, 200);
-    sync = h("button.sync.pure-button", {onclick:upload}, "Sync");
+    // sync = h("button.sync.pure-button", {onclick:upload}, "Save");
     projector.scheduleRender();
   }
 
