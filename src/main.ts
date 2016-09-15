@@ -36,9 +36,9 @@ route("", function () {
   return function () {
     return page("Revison Studio", h("div.pure-u-1.pure-u-md-1-1", [
       keys.map(key =>
-        h('a.pure-button', {key:key, href:"#" + key}, key)
+        h('p', {key}, h('a.pure-button', {href:"#" + key}, key))
       ),
-      h('a.pure-button', {href:"#github/import"}, "Import from github")
+      h('p', {key:"github/import"}, h('a.pure-button', {href:"#github/import"}, "Import from github"))
     ]))();
   }
 
@@ -81,6 +81,7 @@ route(":name", function (params: {name:string}) {
       editor: TextEdit,
       tree: TreeView,
       sync: VNode;
+  let rootHash;
 
 
   edit();
@@ -93,30 +94,30 @@ route(":name", function (params: {name:string}) {
     ].filter(Boolean));
   }
 
-  // function upload() {
-  //   progress = ProgressBar(`Syncing Up ${params.hash}`);
-  //   let update = progress.update
-  //   projector.scheduleRender();
-  //   var worker = new Worker("upload-worker.js");
-  //   worker.postMessage({ url: serverUrl, hash: params.hash });
-  //   worker.onmessage = function (evt) {
-  //     if (typeof evt.data === 'number') {
-  //       update(evt.data);
-  //       return;
-  //     }
-  //     progress = null;
-  //     projector.scheduleRender();
-  //   };
-  // }
+  function upload() {
+    progress = ProgressBar(`Syncing Up ${rootHash}`);
+    let update = progress.update
+    projector.scheduleRender();
+    var worker = new Worker("upload-worker.js");
+    worker.postMessage({ url: serverUrl, hash: rootHash });
+    worker.onmessage = function (evt) {
+      if (typeof evt.data === 'number') {
+        update(evt.data);
+        return;
+      }
+      progress = null;
+      projector.scheduleRender();
+    };
+  }
 
   async function edit() {
-    let rootHash = await aliases.get(params.name);
+    rootHash = await aliases.get(params.name);
     tree = TreeView(params.name, rootHash);
     tree.onclick = onClick
     tree.oncontextmenu = onMenu;
     editor = TextEdit();
     split = SplitView(tree, editor, 200);
-    // sync = h("button.sync.pure-button", {onclick:upload}, "Save");
+    sync = h("button.sync.pure-button", {onclick:upload}, "Save");
     projector.scheduleRender();
   }
 

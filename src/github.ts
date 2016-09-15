@@ -4,6 +4,7 @@ import { go, restore } from "./libs/router"
 import { binToHex } from "./libs/bintools"
 import { page } from "./components/page"
 import { ProgressBar } from "./components/progress-bar"
+import { aliases } from "./libs/aliases"
 
 route("github/auth", function githubAuth() {
   document.title = 'Github Authentication - Revision Studio';
@@ -80,8 +81,6 @@ route("github/import/:owner/:repo/refs/:ref:", function githubImport(params: {
   let token = localStorage.getItem("GITHUB_ACCESS_TOKEN");
   if (!token) return go("github/auth", true);
   document.title = `Importing ${params.repo}/${params.repo} - Revision Studio`;
-  let value = 0,
-      max = 0;
   let owner = params.owner,
       repo = params.repo,
       ref = params.ref;
@@ -90,16 +89,17 @@ route("github/import/:owner/:repo/refs/:ref:", function githubImport(params: {
   var worker = new Worker("github-worker.js");
   worker.postMessage({token, owner, repo, ref});
   worker.onmessage = function (evt) {
-    if (evt.data === 1) progress.update(value, ++max);
-    else if (evt.data === -1) progress.update(++value, max);
+    if (typeof evt.data === 'number') progress.update(evt.data);
     else onDone(evt.data);
   };
 
   return progress;
 
-  function onDone(hex) {
+  async function onDone(hex) {
     console.log("Imported", hex);
-    go(`${owner}-${repo}/${hex}`);
+    let name = `${owner}-${repo}`;
+    await aliases.set(name, hex);
+    go(name);
   }
 
 });

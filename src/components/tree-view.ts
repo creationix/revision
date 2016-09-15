@@ -99,7 +99,7 @@ export function TreeView(rootName, rootHash) {
     }
     return h("li", {key:path}, [
       h('a.row', {
-        href: `/${rootName}/${rootHash}/${path.substr(rootName.length + 1)}`,
+        href: `/${rootName}/live/${path.substr(rootName.length + 1)}`,
         title: value.hash,
         classes: {
           "icon-down-dir": open,
@@ -123,7 +123,7 @@ export function TreeView(rootName, rootHash) {
     let icon = exec ? "icon-cog" : guessIcon(mime);
     return h('li', {key:path}, [
       h('a.row', {
-        href: `/${rootName}/${rootHash}/${path.substr(rootName.length + 1)}`,
+        href: `/${rootName}/live/${path.substr(rootName.length + 1)}`,
         title: value.hash,
         'data-type': 'file',
         'data-mode': value.mode,
@@ -141,7 +141,7 @@ export function TreeView(rootName, rootHash) {
     let mime = guess(path);
     return h("li", {key: path}, [
       h("a.row", {
-        href: `/${rootName}/${rootHash}/${path.substr(rootName.length + 1)}`,
+        href: `/${rootName}/live/${path.substr(rootName.length + 1)}`,
         title: value.hash,
         'data-type': 'link',
         'data-mode': value.mode,

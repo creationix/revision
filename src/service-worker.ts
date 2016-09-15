@@ -1,9 +1,10 @@
 /// <reference path="./typings/service_worker_api.d.ts"/>
 import { serve } from "./libs/serve"
+import { aliases } from "./libs/aliases"
 import "./libs/cas-idb"
 
 const CACHE_NAME = 'v1';
-const routePattern = /^https?:\/\/[^\/]+\/([^\/]+)\/([0-9a-f]{40})(\/?.*)$/;
+const routePattern = /^https?:\/\/[^\/]+\/([^\/]+)\/([0-9a-f]{40}|live)(\/?.*)$/;
 
 let cacheStorage : CacheStorage = self.caches;
 
@@ -44,6 +45,9 @@ self.addEventListener('fetch', function (event) {
     let name = match[1],
         hash = match[2],
         path = match[3];
+    if (hash === 'live') {
+      hash = await aliases.get(name);
+    }
     let res = await serve(name, hash, path);
     return new Response(res.body, res);
   }());
