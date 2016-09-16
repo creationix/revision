@@ -32,12 +32,30 @@ route("", function () {
   document.title = `Revision Studio`;
   let keys = [];
   aliases.keys().then(onKeys);
+  let hashes = {};
 
   return function () {
+
     return page("Revison Studio", h("div.pure-u-1.pure-u-md-1-1", [
-      keys.map(key =>
-        h('p', {key}, h('a.pure-button', {href:"#" + key}, key))
-      ),
+      keys.map(key => {
+        let short = `${location.origin}/#${key}`;
+        let parts : (VNode|string)[] = [ h('a.pure-button', {href:"#" + key}, key) ];
+        let root = hashes[key];
+        if (!root) {
+          hashes[key] = true;
+          aliases.get(key).then(hash=> {
+            hashes[key] = hash;
+            projector.scheduleRender();
+          });
+        }
+        let url;
+        if (typeof root === "string") {
+          url = `${location.origin}/#${key}/${root}`;
+          parts.push(" ", h('input', {value: url}));
+        }
+
+        return h('p.pure-form', {key}, parts)
+      }),
       h('p', {key:"github/import"}, h('a.pure-button', {href:"#github/import"}, "Import from github"))
     ]))();
   }

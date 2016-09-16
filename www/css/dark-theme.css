@@ -3,6 +3,17 @@ body {
   color: rgb(189,198,207);
   overflow:hidden;
 }
+a, a:visited, a:active {
+  color: #48f;
+}
+a.pure-button {
+  color: #333;
+}
+.pure-form input {
+  color: #333;
+}
+
+
 split-view > .resizer {
   background-color: rgb(92,92,92);
 }
