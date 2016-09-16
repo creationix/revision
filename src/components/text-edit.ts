@@ -16,7 +16,7 @@ function binToHexBytes(bin) {
     let b = bin[i];
     let hex = ((b < 0x10) ? '0' : '') + b.toString(16);
     line.push(hex);
-    if (line.length >= 32) {
+    if (line.length >= 24) {
       lines.push(line.join(" "));
       line.length = 0;
     }
