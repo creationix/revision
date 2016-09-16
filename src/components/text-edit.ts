@@ -48,15 +48,13 @@ export interface TextEdit {
 
 export function TextEdit(rootName) {
   let editor = render as TextEdit
-  let saving
+  let saving, pending;
   editor.set = set;
   editor.rootName = rootName;
   return editor
 
   async function set(path, hash) {
-    if (editor.hash) {
-      await save();
-    }
+    if (editor.hash) await save();
     editor.path = path;
     editor.hash = hash;
     projector.scheduleRender();
@@ -88,7 +86,7 @@ export function TextEdit(rootName) {
         ])
       ];
       if (dirty) {
-        body.push(h('button.sync.pure-button', {onclick:save}, "Save"));
+        body.push(h('button.pure-button', {onclick:save}, ["Save"]));
       }
     }
 
@@ -106,10 +104,15 @@ export function TextEdit(rootName) {
     save();
   }
 
-  async function save(explicit?) {
+  async function save() {
+    console.log("Saving...", editor);
     if (editor.value == null) return;
     if (eq(editor.value, editor.original)) return;
-    if (saving) return;
+    if (saving) {
+      console.log("Already saving, abort");
+      pending = true;
+      return;
+    }
     saving = true;
 
     // Load parent tree nodes
@@ -171,6 +174,10 @@ export function TextEdit(rootName) {
     projector.scheduleRender();
 
     saving = false;
+    if (pending) {
+      pending = false;
+      return await save();
+    }
   }
 
 }

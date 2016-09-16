@@ -79,7 +79,8 @@ route(":name", function (params: {name:string}) {
   let progress: ProgressBar,
       split: SplitView,
       editor: TextEdit,
-      tree: TreeView;
+      tree: TreeView,
+      sync: VNode;
   let rootHash;
 
 
@@ -88,11 +89,26 @@ route(":name", function (params: {name:string}) {
   return function () {
     return h('revison-studio', [
       progress && progress(),
-      split && split()
+      split && split(),
+      sync
     ].filter(Boolean));
   }
 
-  function upload() {
+  async function upload() {
+    let rootHash = await aliases.get(params.name);
+
+    // Copy sharable link to clipboard
+    let textArea = document.createElement("textarea");
+    let url = `${location.origin}/#${params.name}/${rootHash}`;
+    textArea.value = url;
+    document.body.appendChild(textArea);
+    textArea.select();
+    var successful = document.execCommand('copy');
+    console.log("Share with others using:", url);
+    if (successful) console.log("Url added to clipboard");
+    else prompt("Share with this url", url);
+    document.body.removeChild(textArea);
+
     progress = ProgressBar(`Syncing Up ${rootHash}`);
     let update = progress.update
     projector.scheduleRender();
@@ -115,6 +131,7 @@ route(":name", function (params: {name:string}) {
     tree.oncontextmenu = onMenu;
     editor = TextEdit(params.name);
     split = SplitView(tree, editor, 200);
+    sync = h("button.sync.pure-button", {onclick:upload}, "Upload");
     projector.scheduleRender();
   }
 
@@ -133,3 +150,15 @@ route(":name", function (params: {name:string}) {
 });
 
 import { loadCommit, loadTree, loadBlob } from "./libs/link"
+
+style(`
+button.sync {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  opacity: 0.5;
+}
+button.sync:hover {
+  opacity: 1.0;
+}
+`)
