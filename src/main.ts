@@ -115,7 +115,7 @@ route(":name", function (params: {name:string}) {
     tree = TreeView(params.name, rootHash);
     tree.onclick = onClick
     tree.oncontextmenu = onMenu;
-    editor = TextEdit();
+    editor = TextEdit(params.name);
     split = SplitView(tree, editor, 200);
     sync = h("button.sync.pure-button", {onclick:upload}, "Save");
     projector.scheduleRender();
@@ -125,7 +125,7 @@ route(":name", function (params: {name:string}) {
     if (evt.altKey || evt.metaKey || evt.ctrlKey || evt.shiftKey) return;
     if (entry.type === "file") {
       evt.preventDefault();
-      editor.set(entry);
+      editor.set(entry.path, entry.hash);
     }
   }
   function onMenu(evt, entry) {
