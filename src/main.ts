@@ -1,5 +1,5 @@
 import { page } from "./components/page"
-import { route, projector, style } from "./libs/router";
+import { route, projector, style, go } from "./libs/router";
 import { h, VNode } from "./libs/maquette"
 import { TreeView } from "./components/tree-view"
 import { SplitView } from "./components/split-view"
@@ -115,18 +115,6 @@ route(":name", function (params: {name:string}) {
   async function upload() {
     let rootHash = await aliases.get(params.name);
 
-    // Copy sharable link to clipboard
-    let textArea = document.createElement("textarea");
-    let url = `${location.origin}/#${params.name}/${rootHash}`;
-    textArea.value = url;
-    document.body.appendChild(textArea);
-    textArea.select();
-    var successful = document.execCommand('copy');
-    console.log("Share with others using:", url);
-    if (successful) console.log("Url added to clipboard");
-    else prompt("Share with this url", url);
-    document.body.removeChild(textArea);
-
     progress = ProgressBar(`Syncing Up ${rootHash}`);
     let update = progress.update
     projector.scheduleRender();
@@ -139,6 +127,9 @@ route(":name", function (params: {name:string}) {
       }
       progress = null;
       projector.scheduleRender();
+
+      // Copy sharable link to clipboard
+      go("");
     };
   }
 

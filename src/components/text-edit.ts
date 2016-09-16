@@ -81,9 +81,9 @@ export function TextEdit(rootName) {
       let dirty = !eq(editor.original, editor.value)
       body = [
         h('p', editor.path + (dirty ? "*" : "")),
-        h('pre', [
+        h('div.box',
           h('textarea', { onkeyup, onblur }, typeof editor.value === "string" ? editor.value : binToHexBytes(editor.value))
-        ])
+        )
       ];
       if (dirty) {
         body.push(h('button.pure-button', {onclick:save}, ["Save"]));
@@ -183,6 +183,15 @@ export function TextEdit(rootName) {
 }
 
 style(`
+  text-edit {
+    position: absolute;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    bottom: 0
+  }
 text-edit p {
   text-align: center;
   height: 30px;
@@ -192,7 +201,7 @@ text-edit p {
   position: absolute;
   top: 0;
 }
-text-edit textarea {
+text-edit .box {
   position: absolute;
   top: 30px;
   bottom: 0;
@@ -200,6 +209,12 @@ text-edit textarea {
   right: 0;
   width: 100%;
   height: auto;
+}
+text-edit textarea {
+  height: 100%;
+  width: 100%;
+  font-family: Ubuntu Mono, monospace;
+  white-space: pre;
   background-color: #555;
   color: #fff;
   border: 0;
