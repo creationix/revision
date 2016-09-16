@@ -79,8 +79,7 @@ route(":name", function (params: {name:string}) {
   let progress: ProgressBar,
       split: SplitView,
       editor: TextEdit,
-      tree: TreeView,
-      sync: VNode;
+      tree: TreeView;
   let rootHash;
 
 
@@ -89,8 +88,7 @@ route(":name", function (params: {name:string}) {
   return function () {
     return h('revison-studio', [
       progress && progress(),
-      split && split(),
-      sync
+      split && split()
     ].filter(Boolean));
   }
 
@@ -117,7 +115,6 @@ route(":name", function (params: {name:string}) {
     tree.oncontextmenu = onMenu;
     editor = TextEdit(params.name);
     split = SplitView(tree, editor, 200);
-    sync = h("button.sync.pure-button", {onclick:upload}, "Save");
     projector.scheduleRender();
   }
 
@@ -136,15 +133,3 @@ route(":name", function (params: {name:string}) {
 });
 
 import { loadCommit, loadTree, loadBlob } from "./libs/link"
-
-style(`
-button.sync {
-  position: absolute;
-  right: 5px;
-  bottom: 5px;
-  opacity: 0.5;
-}
-button.sync:hover {
-  opacity: 1.0;
-}
-`)
