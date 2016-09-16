@@ -94,7 +94,7 @@ export function TextEdit(rootName) {
   }
 
   function onkeyup(evt) {
-    editor.value = evt.target.value;
+    if (typeof editor.value === "string") editor.value = evt.target.value;
     projector.scheduleRender();
     // if (entry.timeout) clearTimeout(entry.timeout);
     // entry.timeout = setTimeout(save, 500, entry, evt.target.value);
